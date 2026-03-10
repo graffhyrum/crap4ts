@@ -5,10 +5,7 @@ import path from "path";
 
 describe("coverage format detection", () => {
   test("detects istanbul from JSON content", () => {
-    const content = fs.readFileSync(
-      path.resolve("test/fixtures/coverage-istanbul.json"),
-      "utf-8"
-    );
+    const content = fs.readFileSync(path.resolve("test/fixtures/coverage-istanbul.json"), "utf-8");
     const result = parseCoverage(content, "coverage-final.json", undefined);
     expect(result).toHaveLength(1);
   });
@@ -26,10 +23,7 @@ describe("coverage format detection", () => {
   });
 
   test("respects explicit format override", () => {
-    const content = fs.readFileSync(
-      path.resolve("test/fixtures/coverage-istanbul.json"),
-      "utf-8"
-    );
+    const content = fs.readFileSync(path.resolve("test/fixtures/coverage-istanbul.json"), "utf-8");
     const result = parseCoverage(content, "data.json", "istanbul");
     expect(result).toHaveLength(1);
   });

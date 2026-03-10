@@ -5,10 +5,7 @@ import path from "path";
 
 describe("LCOV parser", () => {
   test("parses lcov fixture", () => {
-    const content = fs.readFileSync(
-      path.resolve("test/fixtures/coverage.lcov"),
-      "utf-8"
-    );
+    const content = fs.readFileSync(path.resolve("test/fixtures/coverage.lcov"), "utf-8");
     const result = parseLcov(content);
     expect(result).toHaveLength(1);
     expect(result[0].filePath).toBe("test/fixtures/simple.ts");

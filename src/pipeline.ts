@@ -1,7 +1,14 @@
 import fs from "fs";
 import path from "path";
 import { Glob } from "bun";
-import type { Config, FileCoverage, FunctionCrap, FunctionInfo, ProjectSummary, SortField } from "./types";
+import type {
+  Config,
+  FileCoverage,
+  FunctionCrap,
+  FunctionInfo,
+  ProjectSummary,
+  SortField,
+} from "./types";
 import { CrapError } from "./types";
 import { analyzeComplexity } from "./complexity/analyze";
 import { parseCoverage } from "./coverage/resolve";
@@ -37,10 +44,7 @@ function resolveExplicitFiles(files: string[]): string[] {
   return files.map((f) => path.resolve(f)).filter((f) => fs.existsSync(f));
 }
 
-async function resolveGlobFiles(
-  include: string,
-  exclude: string
-): Promise<string[]> {
+async function resolveGlobFiles(include: string, exclude: string): Promise<string[]> {
   const includeGlob = new Glob(include);
   const excludeGlob = new Glob(exclude);
   const results: string[] = [];
@@ -61,16 +65,12 @@ function analyzeAllFiles(files: string[]): FunctionInfo[] {
 
 function readAndParseCoverage(config: Config): FileCoverage[] {
   const covPath = path.resolve(config.coveragePath);
-  if (!fs.existsSync(covPath))
-    throw new CrapError(`Coverage file not found: ${covPath}`);
+  if (!fs.existsSync(covPath)) throw new CrapError(`Coverage file not found: ${covPath}`);
   const content = fs.readFileSync(covPath, "utf-8");
   return parseCoverage(content, covPath, config.format);
 }
 
-function sortFunctions(
-  functions: FunctionCrap[],
-  sort: SortField
-): FunctionCrap[] {
+function sortFunctions(functions: FunctionCrap[], sort: SortField): FunctionCrap[] {
   const sorted = [...functions];
   sorted.sort(comparator(sort));
   return sorted;

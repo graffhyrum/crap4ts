@@ -4,8 +4,26 @@ import type { ProjectSummary } from "../types";
 
 const summary: ProjectSummary = {
   functions: [
-    { name: "foo", filePath: "a.ts", startLine: 1, endLine: 5, complexity: 10, coverage: 0, crapScore: 110, isCrappy: true },
-    { name: "bar", filePath: "a.ts", startLine: 6, endLine: 8, complexity: 1, coverage: null, crapScore: 2, isCrappy: false },
+    {
+      name: "foo",
+      filePath: "a.ts",
+      startLine: 1,
+      endLine: 5,
+      complexity: 10,
+      coverage: 0,
+      crapScore: 110,
+      isCrappy: true,
+    },
+    {
+      name: "bar",
+      filePath: "a.ts",
+      startLine: 6,
+      endLine: 8,
+      complexity: 1,
+      coverage: null,
+      crapScore: 2,
+      isCrappy: false,
+    },
   ],
   totalFunctions: 2,
   crappyCount: 1,
@@ -47,7 +65,16 @@ describe("html reporter", () => {
   test("escapes HTML entities", () => {
     const xssSummary: ProjectSummary = {
       functions: [
-        { name: '<script>alert("xss")</script>', filePath: "a.ts", startLine: 1, endLine: 1, complexity: 1, coverage: 1, crapScore: 1, isCrappy: false },
+        {
+          name: '<script>alert("xss")</script>',
+          filePath: "a.ts",
+          startLine: 1,
+          endLine: 1,
+          complexity: 1,
+          coverage: 1,
+          crapScore: 1,
+          isCrappy: false,
+        },
       ],
       totalFunctions: 1,
       crappyCount: 0,

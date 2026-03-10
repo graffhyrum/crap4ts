@@ -38,9 +38,7 @@ const V8ScriptSchema = type({
 export const V8CoverageSchema = type("string.json.parse").to(
   type({
     result: V8ScriptSchema.array(),
-  })
+  }),
 );
 
-export const IstanbulJsonSchema = type("string.json.parse").to(
-  type("Record<string, unknown>")
-);
+export const IstanbulJsonSchema = type("string.json.parse").to(type("Record<string, unknown>"));

@@ -48,4 +48,14 @@ describe("CLI parsing", () => {
     const config = parseCli(["node", "crap4ts", "--only-crappy"]);
     expect(config.onlyCrappy).toBe(true);
   });
+
+  test("--init sets init to true", () => {
+    const config = parseCli(["node", "crap4ts", "--init"]);
+    expect(config.init).toBe(true);
+  });
+
+  test("no --init sets init to false", () => {
+    const config = parseCli(["node", "crap4ts"]);
+    expect(config.init).toBe(false);
+  });
 });

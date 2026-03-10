@@ -18,7 +18,7 @@ type V8Options = {
 export function parseV8(
   content: string,
   filePath: string,
-  options: V8Options = {}
+  options: V8Options = {},
 ): FileCoverage[] {
   const parsed = V8CoverageSchema(content);
   if (parsed instanceof type.errors)
@@ -42,7 +42,7 @@ function defaultReadFile(warn: (msg: string) => void) {
 function convertScripts(
   scripts: V8Script[],
   sourceRoot: string,
-  readFile: (filePath: string) => string | undefined
+  readFile: (filePath: string) => string | undefined,
 ): FileCoverage[] {
   const results: FileCoverage[] = [];
   for (const script of scripts) {
@@ -72,10 +72,7 @@ function buildLineOffsets(source: string): number[] {
   return offsets;
 }
 
-function extractStatements(
-  functions: V8Function[],
-  lineOffsets: number[]
-): StatementCoverage[] {
+function extractStatements(functions: V8Function[], lineOffsets: number[]): StatementCoverage[] {
   const statements: StatementCoverage[] = [];
   for (const fn of functions) {
     for (const range of fn.ranges) {
@@ -85,10 +82,7 @@ function extractStatements(
   return statements;
 }
 
-function rangeToStatement(
-  range: V8Range,
-  lineOffsets: number[]
-): StatementCoverage {
+function rangeToStatement(range: V8Range, lineOffsets: number[]): StatementCoverage {
   return {
     startLine: offsetToLine(range.startOffset, lineOffsets),
     endLine: offsetToLine(range.endOffset, lineOffsets),

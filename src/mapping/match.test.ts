@@ -63,9 +63,7 @@ describe("function-to-coverage matching", () => {
       endLine: i + 1,
       hits: 1,
     }));
-    const coverage: FileCoverage[] = [
-      { filePath: abs("a.ts"), statements },
-    ];
+    const coverage: FileCoverage[] = [{ filePath: abs("a.ts"), statements }];
     const result = matchFunctions(functions, coverage, 30);
     const outer = result.find((f) => f.name === "outer");
     const inner = result.find((f) => f.name === "inner");

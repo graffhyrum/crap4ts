@@ -1,26 +1,19 @@
 import path from "path";
-import type {
-  FileCoverage,
-  FunctionCrap,
-  FunctionInfo,
-  StatementCoverage,
-} from "../types";
+import type { FileCoverage, FunctionCrap, FunctionInfo, StatementCoverage } from "../types";
 import { computeCrapScore, isCrappy as checkCrappy } from "../crap/score";
 
 export function matchFunctions(
   functions: FunctionInfo[],
   coverage: FileCoverage[],
   threshold: number,
-  warn: (msg: string) => void = console.warn
+  warn: (msg: string) => void = console.warn,
 ): FunctionCrap[] {
   const coverageMap = buildCoverageMap(coverage);
   const functionsByFile = groupByFile(functions);
   return scoreFunctions(functionsByFile, coverageMap, functions, threshold, warn);
 }
 
-function buildCoverageMap(
-  coverage: FileCoverage[]
-): Map<string, FileCoverage> {
+function buildCoverageMap(coverage: FileCoverage[]): Map<string, FileCoverage> {
   const map = new Map<string, FileCoverage>();
   for (const fc of coverage) map.set(normalize(fc.filePath), fc);
   return map;
@@ -42,7 +35,7 @@ function scoreFunctions(
   coverageMap: Map<string, FileCoverage>,
   allFunctions: FunctionInfo[],
   threshold: number,
-  warn: (msg: string) => void
+  warn: (msg: string) => void,
 ): FunctionCrap[] {
   const results: FunctionCrap[] = [];
   const warned = new Set<string>();
@@ -69,7 +62,7 @@ function warnIfUnmatched(
   key: string,
   fileCov: FileCoverage | undefined,
   warned: Set<string>,
-  warn: (msg: string) => void
+  warn: (msg: string) => void,
 ): void {
   if (!fileCov && !warned.has(key)) {
     warn(`Warning: no coverage data for ${key}`);
@@ -80,7 +73,7 @@ function warnIfUnmatched(
 function computeFunctionCoverage(
   fn: FunctionInfo,
   fileCov: FileCoverage | undefined,
-  fileFunctions: FunctionInfo[]
+  fileFunctions: FunctionInfo[],
 ): number | null {
   if (!fileCov) return null;
   const overlapping = filterOverlapping(fileCov.statements, fn);
@@ -91,24 +84,13 @@ function computeFunctionCoverage(
   return countCovered(filtered) / filtered.length;
 }
 
-function filterOverlapping(
-  statements: StatementCoverage[],
-  fn: FunctionInfo
-): StatementCoverage[] {
-  return statements.filter(
-    (s) => s.startLine >= fn.startLine && s.endLine <= fn.endLine
-  );
+function filterOverlapping(statements: StatementCoverage[], fn: FunctionInfo): StatementCoverage[] {
+  return statements.filter((s) => s.startLine >= fn.startLine && s.endLine <= fn.endLine);
 }
 
-function findDirectChildren(
-  parent: FunctionInfo,
-  all: FunctionInfo[]
-): FunctionInfo[] {
+function findDirectChildren(parent: FunctionInfo, all: FunctionInfo[]): FunctionInfo[] {
   const nested = all.filter(
-    (f) =>
-      f !== parent &&
-      f.startLine >= parent.startLine &&
-      f.endLine <= parent.endLine
+    (f) => f !== parent && f.startLine >= parent.startLine && f.endLine <= parent.endLine,
   );
   return nested.filter(
     (child) =>
@@ -117,20 +99,17 @@ function findDirectChildren(
           other !== child &&
           child.startLine >= other.startLine &&
           child.endLine <= other.endLine &&
-          spanLength(other) < spanLength(parent)
-      )
+          spanLength(other) < spanLength(parent),
+      ),
   );
 }
 
 function subtractChildren(
   statements: StatementCoverage[],
-  children: FunctionInfo[]
+  children: FunctionInfo[],
 ): StatementCoverage[] {
   return statements.filter(
-    (s) =>
-      !children.some(
-        (c) => s.startLine >= c.startLine && s.endLine <= c.endLine
-      )
+    (s) => !children.some((c) => s.startLine >= c.startLine && s.endLine <= c.endLine),
   );
 }
 

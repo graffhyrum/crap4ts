@@ -44,9 +44,7 @@ function statusLabel(fn: FunctionCrap): string {
 const HEADERS: Row = ["Function", "Location", "Cmplx", "Coverage", "CRAP", "Status"];
 
 function computeWidths(rows: Row[]): number[] {
-  return HEADERS.map((h, i) =>
-    Math.max(h.length, ...rows.map((r) => stripAnsi(r[i]).length))
-  );
+  return HEADERS.map((h, i) => Math.max(h.length, ...rows.map((r) => stripAnsi(r[i]).length)));
 }
 
 function formatHeader(widths: number[]): string {

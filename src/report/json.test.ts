@@ -6,7 +6,16 @@ describe("json reporter", () => {
   test("produces valid JSON with all fields", () => {
     const summary: ProjectSummary = {
       functions: [
-        { name: "foo", filePath: "a.ts", startLine: 1, endLine: 3, complexity: 5, coverage: 0.8, crapScore: 3.2, isCrappy: false },
+        {
+          name: "foo",
+          filePath: "a.ts",
+          startLine: 1,
+          endLine: 3,
+          complexity: 5,
+          coverage: 0.8,
+          crapScore: 3.2,
+          isCrappy: false,
+        },
       ],
       totalFunctions: 1,
       crappyCount: 0,

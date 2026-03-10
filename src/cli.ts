@@ -23,6 +23,7 @@ function parseArgv(argv: string[]) {
       "only-crappy": { type: "boolean" },
       include: { type: "string" },
       exclude: { type: "string" },
+      init: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean" },
     },
@@ -40,18 +41,21 @@ function buildConfig(values: ParsedValues, positionals: string[]): Config {
     projectThreshold: validateThreshold(values["project-threshold"], 5),
     output: validateEnum(values.output, ["table", "json", "html"] as const, "output") ?? "table",
     outputFile: asStringOrUndef(values["output-file"]),
-    sort: validateEnum(values.sort, ["score", "name", "complexity", "coverage"] as const, "sort") ?? "score",
+    sort:
+      validateEnum(values.sort, ["score", "name", "complexity", "coverage"] as const, "sort") ??
+      "score",
     onlyCrappy: values["only-crappy"] === true,
     include: asString(values.include, "**/*.{ts,tsx,js,jsx}"),
     exclude: asString(values.exclude, "**/node_modules/**"),
     files: positionals,
+    init: values.init === true,
   };
 }
 
 function validateEnum<T extends string>(
   value: string | boolean | undefined,
   valid: readonly T[],
-  label: string
+  label: string,
 ): T | undefined {
   const str = asStringOrUndef(value);
   if (!str) return undefined;
@@ -60,10 +64,7 @@ function validateEnum<T extends string>(
   return str as T;
 }
 
-function validateThreshold(
-  value: string | boolean | undefined,
-  defaultVal: number
-): number {
+function validateThreshold(value: string | boolean | undefined, defaultVal: number): number {
   const str = asStringOrUndef(value);
   if (!str) return defaultVal;
   const num = parseFloat(str);
@@ -72,16 +73,11 @@ function validateThreshold(
   return num;
 }
 
-function asString(
-  value: string | boolean | undefined,
-  defaultVal: string
-): string {
+function asString(value: string | boolean | undefined, defaultVal: string): string {
   return typeof value === "string" ? value : defaultVal;
 }
 
-function asStringOrUndef(
-  value: string | boolean | undefined
-): string | undefined {
+function asStringOrUndef(value: string | boolean | undefined): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
@@ -99,6 +95,7 @@ Options:
       --only-crappy             Show only crappy functions
       --include <glob>          Source file glob (default: **/*.{ts,tsx,js,jsx})
       --exclude <glob>          Exclusion glob (default: **/node_modules/**)
+      --init                    Detect test runner and configure coverage output
   -h, --help                    Show this help
       --version                 Show version`);
   process.exit(0);

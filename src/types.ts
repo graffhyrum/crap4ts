@@ -49,10 +49,14 @@ export type Config = {
   include: string;
   exclude: string;
   files: string[];
+  init: boolean;
 };
 
 export class CrapError extends Error {
-  constructor(message: string, public readonly exitCode: number = 2) {
+  constructor(
+    message: string,
+    public readonly exitCode: number = 2,
+  ) {
     super(message);
     this.name = "CrapError";
   }

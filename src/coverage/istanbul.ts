@@ -3,10 +3,7 @@ import type { FileCoverage, StatementCoverage } from "../types";
 import { CrapError } from "../types";
 import { IstanbulFileSchema, IstanbulJsonSchema, StatementLocationSchema } from "../schemas";
 
-export function parseIstanbul(
-  content: string,
-  filePath: string
-): FileCoverage[] {
+export function parseIstanbul(content: string, filePath: string): FileCoverage[] {
   const parsed = IstanbulJsonSchema(content);
   if (parsed instanceof type.errors)
     throw new CrapError(`Invalid coverage file: ${filePath}\n${parsed.summary}`);
@@ -24,17 +21,14 @@ function convertEntries(data: Record<string, unknown>): FileCoverage[] {
   return results;
 }
 
-function convertFile(
-  file: string,
-  entry: typeof IstanbulFileSchema.infer
-): FileCoverage {
+function convertFile(file: string, entry: typeof IstanbulFileSchema.infer): FileCoverage {
   const statements = buildStatements(entry.statementMap, entry.s);
   return { filePath: entry.path ?? file, statements };
 }
 
 function buildStatements(
   statementMap: Record<string, unknown>,
-  hits: Record<string, number>
+  hits: Record<string, number>,
 ): StatementCoverage[] {
   return Object.entries(statementMap).map(([id, raw]) => {
     const loc = validateLocation(id, raw);

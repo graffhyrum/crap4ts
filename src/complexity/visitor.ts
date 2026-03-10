@@ -22,8 +22,5 @@ function scoreNode(node: ts.Node): number {
 }
 
 function isBinaryWithComplexityOp(node: ts.Node): boolean {
-  return (
-    ts.isBinaryExpression(node) &&
-    COMPLEXITY_OPERATORS.has(node.operatorToken.kind)
-  );
+  return ts.isBinaryExpression(node) && COMPLEXITY_OPERATORS.has(node.operatorToken.kind);
 }

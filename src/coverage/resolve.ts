@@ -7,7 +7,7 @@ export function parseCoverage(
   content: string,
   filePath: string,
   format: CoverageFormat | undefined,
-  sourceRoot?: string
+  sourceRoot?: string,
 ): FileCoverage[] {
   const resolved = format ?? detectFormat(content, filePath);
   return dispatch(resolved, content, filePath, sourceRoot);
@@ -17,7 +17,7 @@ function dispatch(
   format: CoverageFormat,
   content: string,
   filePath: string,
-  sourceRoot?: string
+  sourceRoot?: string,
 ): FileCoverage[] {
   switch (format) {
     case "istanbul":
