@@ -1,32 +1,23 @@
 import path from "node:path";
+import { bunFileSystem } from "./fs";
 import type { FileSystem, RunnerAdapter } from "./types";
 
 type WriteFile = (path: string, content: string) => Promise<unknown>;
-
-const defaultFs: FileSystem = {
-  exists: async (p) => Bun.file(p).exists(),
-  readText: async (p) => {
-    const f = Bun.file(p);
-    return (await f.exists()) ? f.text() : null;
-  },
-};
 
 export async function configureRunner(
   adapter: RunnerAdapter,
   projectRoot: string,
   write: WriteFile = Bun.write,
-  fs: FileSystem = defaultFs,
+  fs: FileSystem = bunFileSystem,
 ): Promise<void> {
   const dest = path.join(projectRoot, adapter.configFilename());
-  if (await fileExists(dest, fs)) return;
+  if (await fs.exists(dest)) return warnSkipped(dest);
   await writeConfigFile(adapter, dest, write);
   printInstructions(adapter);
 }
 
-async function fileExists(dest: string, fs: FileSystem): Promise<boolean> {
-  const exists = await fs.exists(dest);
-  if (exists) console.warn(`Skipping: ${dest} already exists`);
-  return exists;
+function warnSkipped(dest: string): void {
+  console.warn(`Skipping: ${dest} already exists`);
 }
 
 async function writeConfigFile(
@@ -34,8 +25,13 @@ async function writeConfigFile(
   dest: string,
   write: WriteFile,
 ): Promise<void> {
-  await write(dest, adapter.generateConfig());
-  console.log(`Written: ${dest}`);
+  try {
+    await write(dest, adapter.generateConfig());
+    console.log(`Written: ${dest}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to write ${dest}: ${msg}`);
+  }
 }
 
 function printInstructions(adapter: RunnerAdapter): void {

@@ -46,9 +46,12 @@ describe("configureRunner", () => {
       warnMessages.push(msg);
     };
 
-    await configureRunner(makeAdapter(), PROJECT_ROOT, write, fs);
+    try {
+      await configureRunner(makeAdapter(), PROJECT_ROOT, write, fs);
+    } finally {
+      console.warn = origWarn;
+    }
 
-    console.warn = origWarn;
     expect(warnMessages.some((m) => m.includes("already exists"))).toBe(true);
   });
 
@@ -61,9 +64,12 @@ describe("configureRunner", () => {
       logMessages.push(msg);
     };
 
-    await configureRunner(makeAdapter(), PROJECT_ROOT, write, fs);
+    try {
+      await configureRunner(makeAdapter(), PROJECT_ROOT, write, fs);
+    } finally {
+      console.log = origLog;
+    }
 
-    console.log = origLog;
     expect(logMessages.some((m) => m.includes("Written:"))).toBe(true);
   });
 });
