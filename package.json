@@ -6,10 +6,10 @@
     "crap4ts": "src/index.ts"
   },
   "scripts": {
-    "lint": "oxlint src/",
-    "fmt": "oxfmt src/",
-    "fmt:check": "oxfmt --check src/",
-    "check": "tsc --noEmit",
+    "lint": "bunx oxlint src/",
+    "fmt": "bunx oxfmt src/",
+    "fmt:check": "bunx oxfmt --check src/",
+    "check": "bunx tsc --noEmit",
     "test": "bun test",
     "vet": "bun run lint && bun run fmt:check && bun run check && bun run test"
   },
