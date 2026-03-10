@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import type { Config, CoverageFormat, OutputFormat, SortField } from "./types";
+import type { Config } from "./types";
 import { CrapError } from "./types";
 
 export function parseCli(argv: string[]): Config {
