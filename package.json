@@ -11,7 +11,7 @@
     "fmt:check": "bunx oxfmt --check src/",
     "check": "bunx tsc --noEmit",
     "test": "bun test",
-    "vet": "bun run lint && bun run fmt:check && bun run check && bun run test"
+    "vet": "bun run lint && bun run fmt && bun run check && bun run test"
   },
   "dependencies": {
     "arktype": "^2",
