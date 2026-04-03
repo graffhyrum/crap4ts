@@ -1,21 +1,11 @@
+import { bunFileSystem } from "../fs";
 import { readPackageJson, type PackageJson } from "../packageJson";
+import type { CoverageFormat } from "../../types";
 import type { FileSystem, RunnerAdapter } from "../types";
 
-const bunFs: FileSystem = {
-  exists: async (p) => Bun.file(p).exists(),
-  readText: async (p) => {
-    const f = Bun.file(p);
-    return (await f.exists()) ? f.text() : null;
-  },
-};
-
-export async function detect(root: string, fs: FileSystem = bunFs): Promise<boolean> {
-  const results = await Promise.all([
-    lockfileExists(root, fs),
-    hasBunDep(root, fs),
-    hasBunScript(root, fs),
-  ]);
-  return results.some(Boolean);
+export async function detect(root: string, fs: FileSystem = bunFileSystem): Promise<boolean> {
+  const [hasLock, pkg] = await Promise.all([lockfileExists(root, fs), readPackageJson(root, fs)]);
+  return hasLock || isBunInDeps(pkg) || hasBunTestScript(pkg);
 }
 
 function lockfileExists(root: string, fs: FileSystem): Promise<boolean> {
@@ -24,20 +14,10 @@ function lockfileExists(root: string, fs: FileSystem): Promise<boolean> {
   );
 }
 
-async function hasBunDep(root: string, fs: FileSystem): Promise<boolean> {
-  const pkg = await readPackageJson(root, fs);
-  return isBunInDeps(pkg);
-}
-
 function isBunInDeps(pkg: PackageJson | null): boolean {
   if (!pkg) return false;
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   return "bun" in deps || "@types/bun" in deps;
-}
-
-async function hasBunScript(root: string, fs: FileSystem): Promise<boolean> {
-  const pkg = await readPackageJson(root, fs);
-  return hasBunTestScript(pkg);
 }
 
 function hasBunTestScript(pkg: PackageJson | null): boolean {
@@ -45,8 +25,8 @@ function hasBunTestScript(pkg: PackageJson | null): boolean {
   return Object.values(pkg.scripts ?? {}).some((v) => v.includes("bun test"));
 }
 
-function getCoverageConfig() {
-  return { path: "./coverage/lcov.info", format: "lcov" as const };
+function getCoverageConfig(): { path: string; format: CoverageFormat } {
+  return { path: "./coverage/lcov.info", format: "lcov" };
 }
 
 function generateConfig(): string {
@@ -66,7 +46,7 @@ function getSetupInstructions(): string[] {
 
 export const bunAdapter: RunnerAdapter = {
   name: "bun",
-  detect: (root) => detect(root, bunFs),
+  detect: (root) => detect(root, bunFileSystem),
   getCoverageConfig,
   generateConfig,
   configFilename,
