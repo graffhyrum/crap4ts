@@ -70,4 +70,30 @@ describe("table reporter", () => {
     expect(output).toContain("Total: 3 functions");
     expect(output).toContain("Crappy: 1");
   });
+
+  test("shows 'Showing X of Y' when filtered", () => {
+    const filtered: ProjectSummary = {
+      functions: [summary.functions[0]],
+      totalFunctions: 3,
+      crappyCount: 1,
+      crappyPercent: 33.3,
+      isFlagged: true,
+    };
+    const output = renderTable(filtered);
+    expect(output).toContain("Showing 1 of 3 functions");
+  });
+
+  test("shows empty message when no functions displayed", () => {
+    const empty: ProjectSummary = {
+      functions: [],
+      totalFunctions: 10,
+      crappyCount: 0,
+      crappyPercent: 0,
+      isFlagged: false,
+    };
+    const output = renderTable(empty);
+    expect(output).toContain("No crappy functions found");
+    expect(output).toContain("Showing 0 of 10 functions");
+    expect(output).toContain("PASS");
+  });
 });

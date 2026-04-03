@@ -62,6 +62,35 @@ describe("html reporter", () => {
     expect(output).toContain("sortTable");
   });
 
+  test("shows 'Showing X of Y' when filtered", () => {
+    const filtered: ProjectSummary = {
+      functions: [summary.functions[0]],
+      totalFunctions: 5,
+      crappyCount: 1,
+      crappyPercent: 20,
+      isFlagged: true,
+    };
+    const output = renderHtml(filtered);
+    expect(output).toContain("Showing:");
+    expect(output).toContain("1 of 5 functions");
+  });
+
+  test("shows empty message when no functions displayed", () => {
+    const empty: ProjectSummary = {
+      functions: [],
+      totalFunctions: 10,
+      crappyCount: 0,
+      crappyPercent: 0,
+      isFlagged: false,
+    };
+    const output = renderHtml(empty);
+    expect(output).toContain("No crappy functions found");
+    expect(output).not.toContain("<table");
+    expect(output).toContain("Showing:");
+    expect(output).toContain("0 of 10 functions");
+    expect(output).toContain("PASS");
+  });
+
   test("escapes HTML entities", () => {
     const xssSummary: ProjectSummary = {
       functions: [

@@ -3,6 +3,31 @@ import { renderJson } from "./json";
 import type { ProjectSummary } from "../types";
 
 describe("json reporter", () => {
+  test("reflects filtered functions with full totalFunctions", () => {
+    const filtered: ProjectSummary = {
+      functions: [
+        {
+          name: "bad",
+          filePath: "a.ts",
+          startLine: 1,
+          endLine: 5,
+          complexity: 10,
+          coverage: 0,
+          crapScore: 110,
+          isCrappy: true,
+        },
+      ],
+      totalFunctions: 5,
+      crappyCount: 1,
+      crappyPercent: 20,
+      isFlagged: true,
+    };
+    const output = renderJson(filtered);
+    const parsed = JSON.parse(output);
+    expect(parsed.functions).toHaveLength(1);
+    expect(parsed.totalFunctions).toBe(5);
+  });
+
   test("produces valid JSON with all fields", () => {
     const summary: ProjectSummary = {
       functions: [

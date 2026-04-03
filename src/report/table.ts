@@ -8,6 +8,19 @@ const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
 
 export function renderTable(summary: ProjectSummary): string {
+  if (summary.functions.length === 0) return renderEmptyTable(summary);
+  return renderFullTable(summary);
+}
+
+function renderEmptyTable(summary: ProjectSummary): string {
+  return [
+    `No crappy functions found. Use --all to see all functions.`,
+    "",
+    formatFooter(summary),
+  ].join("\n");
+}
+
+function renderFullTable(summary: ProjectSummary): string {
   const rows = summary.functions.map(formatRow);
   const widths = computeWidths(rows);
   const lines = [
@@ -67,10 +80,17 @@ function formatDataRow(row: Row, widths: number[]): string {
 function formatFooter(summary: ProjectSummary): string {
   const flag = summary.isFlagged ? `${RED}FLAGGED${RESET}` : `${GREEN}PASS${RESET}`;
   return [
-    `${BOLD}Total: ${summary.totalFunctions} functions${RESET}`,
+    `${BOLD}${countLabel(summary)}${RESET}`,
     `Crappy: ${summary.crappyCount} (${summary.crappyPercent.toFixed(1)}%)`,
     `Project: ${flag}`,
   ].join("  |  ");
+}
+
+function countLabel(summary: ProjectSummary): string {
+  if (summary.functions.length < summary.totalFunctions) {
+    return `Showing ${summary.functions.length} of ${summary.totalFunctions} functions`;
+  }
+  return `Total: ${summary.totalFunctions} functions`;
 }
 
 function stripAnsi(str: string): string {

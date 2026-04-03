@@ -1,6 +1,20 @@
 import type { ProjectSummary, FunctionCrap } from "../types";
 
 export function renderHtml(summary: ProjectSummary): string {
+  if (summary.functions.length === 0) return renderEmptyHtml(summary);
+  return renderFullHtml(summary);
+}
+
+function renderEmptyHtml(summary: ProjectSummary): string {
+  return [
+    renderHead(),
+    `<p>No crappy functions found. Use <code>--all</code> to see all functions.</p>`,
+    renderSummaryFooter(summary),
+    renderTail(),
+  ].join("\n");
+}
+
+function renderFullHtml(summary: ProjectSummary): string {
   return [
     renderHead(),
     renderTableHtml(summary),
@@ -61,10 +75,17 @@ function renderSummaryFooter(summary: ProjectSummary): string {
   const cls = summary.isFlagged ? "flagged" : "pass";
   const label = summary.isFlagged ? "FLAGGED" : "PASS";
   return `<div class="summary">
-  <strong>Total:</strong> ${summary.totalFunctions} functions |
+  ${htmlCountLabel(summary)} |
   <strong>Crappy:</strong> ${summary.crappyCount} (${summary.crappyPercent.toFixed(1)}%) |
   <strong>Project:</strong> <span class="${cls}">${label}</span>
 </div>`;
+}
+
+function htmlCountLabel(summary: ProjectSummary): string {
+  if (summary.functions.length < summary.totalFunctions) {
+    return `<strong>Showing:</strong> ${summary.functions.length} of ${summary.totalFunctions} functions`;
+  }
+  return `<strong>Total:</strong> ${summary.totalFunctions} functions`;
 }
 
 function renderScript(): string {
