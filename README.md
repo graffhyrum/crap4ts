@@ -2,6 +2,8 @@
 
 CRAP (Change Risk Analysis and Predictions) score calculator for TypeScript and JavaScript codebases. Identifies high-risk functions by combining cyclomatic complexity with test coverage data.
 
+This is a clean-room port of [crap4clj](https://github.com/unclebob/crap4clj) by Robert C. Martin. The original Clojure implementation was studied for its public interface and CRAP algorithm behavior, then re-implemented from scratch in TypeScript without referencing the source code.
+
 ## What is a CRAP score?
 
 The CRAP metric flags functions that are both complex and poorly tested:
