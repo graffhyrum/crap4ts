@@ -45,11 +45,13 @@ export type Config = {
   output: OutputFormat;
   outputFile: string | undefined;
   sort: SortField;
-  onlyCrappy: boolean;
+  showAll: boolean;
+  onlyCrappyDeprecated: boolean;
   include: string;
   exclude: string;
   files: string[];
   init: boolean;
+  skipGitignore: boolean;
 };
 
 export class CrapError extends Error {

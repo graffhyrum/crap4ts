@@ -10,7 +10,7 @@ describe("CLI parsing", () => {
     expect(config.projectThreshold).toBe(5);
     expect(config.output).toBe("table");
     expect(config.sort).toBe("score");
-    expect(config.onlyCrappy).toBe(false);
+    expect(config.showAll).toBe(false);
   });
 
   test("parses coverage path", () => {
@@ -44,9 +44,20 @@ describe("CLI parsing", () => {
     expect(config.files).toEqual(["a.ts", "b.ts"]);
   });
 
-  test("parses only-crappy flag", () => {
+  test("parses --all flag", () => {
+    const config = parseCli(["node", "crap4ts", "--all"]);
+    expect(config.showAll).toBe(true);
+  });
+
+  test("--only-crappy sets deprecated flag", () => {
     const config = parseCli(["node", "crap4ts", "--only-crappy"]);
-    expect(config.onlyCrappy).toBe(true);
+    expect(config.onlyCrappyDeprecated).toBe(true);
+  });
+
+  test("--all with --only-crappy sets both flags", () => {
+    const config = parseCli(["node", "crap4ts", "--all", "--only-crappy"]);
+    expect(config.showAll).toBe(true);
+    expect(config.onlyCrappyDeprecated).toBe(true);
   });
 
   test("--init sets init to true", () => {

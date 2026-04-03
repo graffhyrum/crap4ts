@@ -17,6 +17,7 @@ import { summarize } from "./crap/score";
 import { renderTable } from "./report/table";
 import { renderJson } from "./report/json";
 import { renderHtml } from "./report/html";
+import { isGitignored, loadGitignoreGlobs } from "./gitignore";
 
 export async function runPipeline(config: Config): Promise<number> {
   const sourceFiles = await resolveSourceFiles(config);
@@ -24,32 +25,44 @@ export async function runPipeline(config: Config): Promise<number> {
     console.error("No source files found.");
     return 2;
   }
+  if (config.onlyCrappyDeprecated) {
+    console.warn("--only-crappy is deprecated (now the default). Use --all to show all functions.");
+  }
   const functions = analyzeAllFiles(sourceFiles);
   const coverage = readAndParseCoverage(config);
   const matched = matchFunctions(functions, coverage, config.threshold);
   const sorted = sortFunctions(matched, config.sort);
-  const filtered = config.onlyCrappy ? sorted.filter((f) => f.isCrappy) : sorted;
-  const summary = summarize(filtered, config.projectThreshold);
-  const output = renderOutput(summary, config);
+  const summary = summarize(sorted, config.projectThreshold);
+  const displayed = config.showAll ? sorted : sorted.filter((f) => f.isCrappy);
+  const output = renderOutput({ ...summary, functions: displayed }, config);
   writeOutput(output, config);
   return summary.isFlagged ? 1 : 0;
 }
 
 async function resolveSourceFiles(config: Config): Promise<string[]> {
-  if (config.files.length > 0) return resolveExplicitFiles(config.files);
-  return resolveGlobFiles(config.include, config.exclude);
+  const gitignoreGlobs = config.skipGitignore ? [] : await loadGitignoreGlobs(".");
+  if (config.files.length > 0) return resolveExplicitFiles(config.files, gitignoreGlobs);
+  return resolveGlobFiles(config.include, config.exclude, gitignoreGlobs);
 }
 
-function resolveExplicitFiles(files: string[]): string[] {
-  return files.map((f) => path.resolve(f)).filter((f) => fs.existsSync(f));
+function resolveExplicitFiles(files: string[], gitignoreGlobs: Glob[]): string[] {
+  return files
+    .map((f) => path.resolve(f))
+    .filter((f) => fs.existsSync(f))
+    .filter((f) => !isGitignored(gitignoreGlobs, path.relative(".", f)));
 }
 
-async function resolveGlobFiles(include: string, exclude: string): Promise<string[]> {
+async function resolveGlobFiles(
+  include: string,
+  exclude: string,
+  gitignoreGlobs: Glob[],
+): Promise<string[]> {
   const includeGlob = new Glob(include);
   const excludeGlob = new Glob(exclude);
   const results: string[] = [];
   for await (const file of includeGlob.scan({ cwd: "." })) {
-    if (!excludeGlob.match(file)) results.push(path.resolve(file));
+    if (!excludeGlob.match(file) && !isGitignored(gitignoreGlobs, file))
+      results.push(path.resolve(file));
   }
   return results;
 }

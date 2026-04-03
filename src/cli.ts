@@ -21,9 +21,11 @@ function parseArgv(argv: string[]) {
       "output-file": { type: "string" },
       sort: { type: "string" },
       "only-crappy": { type: "boolean" },
+      all: { type: "boolean" },
       include: { type: "string" },
       exclude: { type: "string" },
       init: { type: "boolean" },
+      "no-gitignore": { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean" },
     },
@@ -44,11 +46,13 @@ function buildConfig(values: ParsedValues, positionals: string[]): Config {
     sort:
       validateEnum(values.sort, ["score", "name", "complexity", "coverage"] as const, "sort") ??
       "score",
-    onlyCrappy: values["only-crappy"] === true,
+    showAll: values.all === true,
+    onlyCrappyDeprecated: values["only-crappy"] === true,
     include: asString(values.include, "**/*.{ts,tsx,js,jsx}"),
     exclude: asString(values.exclude, "**/node_modules/**"),
     files: positionals,
     init: values.init === true,
+    skipGitignore: values["no-gitignore"] === true,
   };
 }
 
@@ -92,9 +96,11 @@ Options:
   -o, --output <format>         Output format: table | json | html (default: table)
       --output-file <path>      Write report to file
       --sort <field>            Sort by: score | name | complexity | coverage (default: score)
-      --only-crappy             Show only crappy functions
+      --all                     Show all functions, not just problematic ones
+      --only-crappy             (deprecated) Now the default behavior
       --include <glob>          Source file glob (default: **/*.{ts,tsx,js,jsx})
       --exclude <glob>          Exclusion glob (default: **/node_modules/**)
+      --no-gitignore            Do not exclude gitignored files
       --init                    Detect test runner and configure coverage output
   -h, --help                    Show this help
       --version                 Show version`);

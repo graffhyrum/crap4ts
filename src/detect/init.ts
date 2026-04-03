@@ -4,7 +4,7 @@ import { detectRunners } from "./index";
 export async function runInit(projectRoot: string): Promise<number> {
   const adapters = await detectRunners(projectRoot);
   if (adapters.length === 0) return reportNoneFound();
-  for (const adapter of adapters) await configureRunner(adapter, projectRoot);
+  await Promise.allSettled(adapters.map((a) => configureRunner(a, projectRoot)));
   return 0;
 }
 
