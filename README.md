@@ -21,6 +21,21 @@ A function with complexity 10 and 0% coverage scores **110**. The same function 
 
 Requires [Bun](https://bun.sh) v1.1+.
 
+### From GitHub Packages
+
+```bash
+# Authenticate to GitHub Packages (once per machine)
+# Create a classic PAT with `read:packages` (and `repo` if the package is private)
+echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
+echo "@graffhyrum:registry=https://npm.pkg.github.com" >> ~/.npmrc
+
+bun add -g @graffhyrum/crap4ts
+# or project-local:
+bun add -d @graffhyrum/crap4ts
+```
+
+### From source
+
 ```bash
 bun install
 ```
@@ -86,10 +101,19 @@ crap4ts -c v8-coverage.json -f v8 --sort complexity
 ## Development
 
 ```bash
-bun test          # Run tests (66 tests, 11 files)
+bun test          # Run tests
 bun run check     # Type check with tsc
+bun run vet       # Lint, format, typecheck, and test
 ```
+
+### Releases
+
+This project uses [Changesets](https://github.com/changesets/changesets) and publishes to [GitHub Packages](https://github.com/features/packages).
+
+1. After making a user-facing change, run `bun run changeset` and commit the generated file.
+2. Merge to `main`. The Release workflow opens a **Version Packages** PR (or updates it).
+3. Merge that PR to publish `@graffhyrum/crap4ts` to GitHub Packages and create a GitHub release tag.
 
 ## License
 
-Private
+Private (UNLICENSED) — published to GitHub Packages with restricted access.
