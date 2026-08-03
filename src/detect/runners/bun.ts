@@ -1,3 +1,4 @@
+import path from "node:path";
 import { bunFileSystem } from "../fs";
 import { readPackageJson, type PackageJson } from "../packageJson";
 import type { CoverageFormat } from "../../types";
@@ -9,9 +10,10 @@ export async function detect(root: string, fs: FileSystem = bunFileSystem): Prom
 }
 
 function lockfileExists(root: string, fs: FileSystem): Promise<boolean> {
-  return Promise.all([fs.exists(`${root}/bun.lockb`), fs.exists(`${root}/bun.lock`)]).then((rs) =>
-    rs.some(Boolean),
-  );
+  return Promise.all([
+    fs.exists(path.join(root, "bun.lockb")),
+    fs.exists(path.join(root, "bun.lock")),
+  ]).then((rs) => rs.some(Boolean));
 }
 
 function isBunInDeps(pkg: PackageJson | null): boolean {

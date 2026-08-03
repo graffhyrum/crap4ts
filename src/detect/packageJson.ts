@@ -1,3 +1,4 @@
+import path from "node:path";
 import { type } from "arktype";
 import type { FileSystem } from "./types";
 
@@ -16,7 +17,7 @@ export async function readPackageJson(
   projectRoot: string,
   fs: FileSystem,
 ): Promise<PackageJson | null> {
-  const text = await fs.readText(`${projectRoot}/package.json`);
+  const text = await fs.readText(path.join(projectRoot, "package.json"));
   if (text === null) return null;
   const result = parsePackageJson(text);
   if (result instanceof type.errors) return null;

@@ -1,9 +1,10 @@
+import path from "node:path";
 import { describe, expect, mock, test } from "bun:test";
 import type { FileSystem, RunnerAdapter } from "./types";
 import { configureRunner } from "./configure";
 
 const PROJECT_ROOT = "/tmp/test-configure";
-const DEST = `${PROJECT_ROOT}/bunfig.toml`;
+const DEST = path.join(PROJECT_ROOT, "bunfig.toml");
 const TOML_CONTENT = `[test]\ncoverage = true\ncoverageReporter = ["lcov"]\ncoverageDir = "coverage"\n`;
 
 function makeAdapter(overrides: Partial<RunnerAdapter> = {}): RunnerAdapter {
