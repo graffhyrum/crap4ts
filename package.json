@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "arktype": "^2.2.3",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
