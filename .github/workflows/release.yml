@@ -3,13 +3,20 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+# New group name bypasses zombie re-runs stuck on the old
+# `${{ github.workflow }}-${{ github.ref }}` concurrency key
+# (cancel / force-cancel / delete all fail on those runs).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Version or publish
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
