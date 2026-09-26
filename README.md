@@ -81,7 +81,7 @@ crap4ts -c v8-coverage.json -f v8 --sort complexity
 
 - **0** — project passes (crappy % within project threshold)
 - **1** — project flagged (too many crappy functions), or `--init` found no test runner
-- **2** — the run did not score the project (missing coverage, bad arguments, V8 without `-f v8`, or no source files)
+- **2** — the run did not score the project (missing coverage, invalid flag values, V8 without `-f v8`, or no source files)
 
 ## Output formats
 
