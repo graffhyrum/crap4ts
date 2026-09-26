@@ -1,6 +1,21 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
-import { runGate } from "./gate";
+import { cliDeps, main, runGate } from "./gate";
+
+async function logged(run: () => Promise<number>) {
+  const out: string[] = [];
+  const log = console.log;
+  console.log = (message?: unknown) => {
+    out.push(String(message));
+  };
+  try {
+    return { code: await run(), out };
+  } finally {
+    console.log = log;
+  }
+}
 
 const reportPath = join("/proj", ".crap4ts", "report.json");
 const gatePath = join("/proj", ".crap4ts", "gate.json");
@@ -244,7 +259,16 @@ describe("runGate", () => {
     const config = {
       version: 1,
       coverageCommand: "bun test --coverage",
-      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov", "--exclude", "**/*", "--threshold", "999"],
+      crapArgs: [
+        "-c",
+        "coverage/lcov.info",
+        "-f",
+        "lcov",
+        "--exclude",
+        "**/*",
+        "--threshold",
+        "999",
+      ],
       threshold: 30,
       projectThreshold: 5,
     };
@@ -545,5 +569,86 @@ describe("runGate", () => {
     });
     expect(exit).toBe(2);
     expect(result.message).toBe("report disagrees with the process exit code");
+  });
+});
+
+describe("gate main", () => {
+  test("prints a missing config and returns 2", async () => {
+    const { code, out } = await logged(() =>
+      main({
+        cwd: "/proj",
+        runner: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+        fs: {
+          exists: () => false,
+          readText: () => "",
+          writeText: () => {},
+          mkdirp: () => {},
+        },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(JSON.parse(out[0] ?? "").message).toBe("gate config is missing");
+  });
+
+  test("a thrown filesystem error prints gate failed details", async () => {
+    const { code, out } = await logged(() =>
+      main({
+        cwd: "/proj",
+        runner: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+        fs: {
+          exists: () => {
+            throw new Error("disk full");
+          },
+          readText: () => "",
+          writeText: () => {},
+          mkdirp: () => {},
+        },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(JSON.parse(out[0] ?? "").message).toBe("disk full");
+    expect(JSON.parse(out[0] ?? "").exit).toBe(2);
+  });
+
+  test("a non-Error failure prints gate failed", async () => {
+    const { code, out } = await logged(() =>
+      main({
+        cwd: "/proj",
+        runner: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+        fs: {
+          exists: () => {
+            throw "nope";
+          },
+          readText: () => "",
+          writeText: () => {},
+          mkdirp: () => {},
+        },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(JSON.parse(out[0] ?? "").message).toBe("gate failed");
+  });
+
+  test("cli deps read package.json from the current directory", async () => {
+    const deps = cliDeps();
+    const pkg = await deps.fs.readText(join(deps.cwd, "package.json"));
+    expect(pkg).toContain('"name": "@graffhyrum/crap4ts"');
+  });
+
+  test("the script entry reports a missing config", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "crap-gate-"));
+    try {
+      const proc = Bun.spawn([process.execPath, join(import.meta.dir, "gate.ts")], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+        stdin: "ignore",
+      });
+      const stdout = await new Response(proc.stdout).text();
+      expect(await proc.exited).toBe(2);
+      expect(JSON.parse(stdout).message).toBe("gate config is missing");
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
   });
 });
