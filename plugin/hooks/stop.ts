@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { clampText, isUnsafeText, parseTriageResult, type TriageResult } from "../scripts/types";
 
@@ -150,9 +149,9 @@ async function main(): Promise<number> {
     const triageScript = join(pluginRoot, "scripts", "triage.ts");
 
     const output = await decideStop(input, {
-      gateConfigExists: existsSync(join(cwd, ".crap4ts", "gate.json")),
-      gateScriptExists: existsSync(gateScript),
-      triageScriptExists: existsSync(triageScript),
+      gateConfigExists: await Bun.file(join(cwd, ".crap4ts", "gate.json")).exists(),
+      gateScriptExists: await Bun.file(gateScript).exists(),
+      triageScriptExists: await Bun.file(triageScript).exists(),
       runGate: async () => {
         const { exitCode, stdout } = await spawnScript(gateScript);
         return parseGateStop(stdout, exitCode);

@@ -1,4 +1,3 @@
-import { writeFileSync } from "node:fs";
 import path from "path";
 import { Glob } from "bun";
 import type {
@@ -40,7 +39,7 @@ export async function runPipeline(
   const summary = summarize(sorted, config.projectThreshold);
   const displayed = config.showAll ? sorted : sorted.filter((f) => f.isCrappy);
   const output = renderOutput({ ...summary, functions: displayed }, config);
-  writeOutput(output, config);
+  await writeOutput(output, config);
   return summary.isFlagged ? 1 : 0;
 }
 
@@ -95,7 +94,7 @@ async function readAndParseCoverage(config: Config, fs: FileSystem): Promise<Fil
   if (!(await fs.exists(covPath))) throw new CrapError(`Coverage file not found: ${covPath}`);
   const content = await fs.readText(covPath);
   if (content === null) throw new CrapError(`Coverage file not found: ${covPath}`);
-  return parseCoverage(content, covPath, config.format);
+  return await parseCoverage(content, covPath, config.format);
 }
 
 function sortFunctions(functions: FunctionCrap[], sort: SortField): FunctionCrap[] {
@@ -128,10 +127,10 @@ function renderOutput(summary: ProjectSummary, config: Config): string {
   }
 }
 
-function writeOutput(output: string, config: Config): void {
+async function writeOutput(output: string, config: Config): Promise<void> {
   const dest = config.outputFile ?? defaultOutputFile(config);
   if (dest) {
-    writeFileSync(dest, output, "utf-8");
+    await Bun.write(dest, output);
     console.log(`Report written to ${dest}`);
   } else {
     console.log(output);

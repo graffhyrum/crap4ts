@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { GateConfig, GateResult } from "./types";
 import { clampText, isInsideRepo, parseGateConfig, parseProjectSummary } from "./types";
@@ -10,9 +10,9 @@ export type CommandRunner = (
 ) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
 
 export type GateFs = {
-  exists: (path: string) => boolean;
-  readText: (path: string) => string;
-  writeText: (path: string, contents: string) => void;
+  exists: (path: string) => boolean | Promise<boolean>;
+  readText: (path: string) => string | Promise<string>;
+  writeText: (path: string, contents: string) => void | Promise<void>;
   mkdirp: (path: string) => void;
 };
 
@@ -75,13 +75,13 @@ export async function runGate(
     exit: 2,
   });
 
-  if (!deps.fs.exists(configPath)) {
+  if (!(await deps.fs.exists(configPath))) {
     return missing("gate config is missing");
   }
 
   let config: GateConfig;
   try {
-    const parsed = parseGateConfig(JSON.parse(deps.fs.readText(configPath)));
+    const parsed = parseGateConfig(JSON.parse(await deps.fs.readText(configPath)));
     if (parsed === null) {
       return missing("gate config is invalid");
     }
@@ -175,7 +175,7 @@ export async function runGate(
   }
 
   deps.fs.mkdirp(dirname(reportPath));
-  deps.fs.writeText(reportPath, crap.stdout);
+  await deps.fs.writeText(reportPath, crap.stdout);
 
   if (crap.exitCode === 0) {
     return {
@@ -207,11 +207,13 @@ export async function runGate(
 }
 
 const defaultFs: GateFs = {
-  exists: (path) => existsSync(path),
-  readText: (path) => readFileSync(path, "utf-8"),
-  writeText: (path, contents) => writeFileSync(path, contents, "utf-8"),
+  exists: (path) => Bun.file(path).exists(),
+  readText: (path) => Bun.file(path).text(),
+  writeText: async (path, contents) => {
+    await Bun.write(path, contents);
+  },
   mkdirp: (path) => {
-    if (!existsSync(path)) mkdirSync(path, { recursive: true });
+    mkdirSync(path, { recursive: true });
   },
 };
 

@@ -72,7 +72,7 @@ function formatDataRow(row: Row, widths: number[]): string {
   return row
     .map((cell, i) => {
       const plain = stripAnsi(cell);
-      return cell + " ".repeat(Math.max(0, widths[i] - plain.length));
+      return `${cell}${" ".repeat(Math.max(0, widths[i] - plain.length))}`;
     })
     .join("  ");
 }

@@ -1,5 +1,4 @@
 import { type } from "arktype";
-import fs from "fs";
 import path from "path";
 import type { FileCoverage, StatementCoverage } from "../types";
 import { CrapError } from "../types";
@@ -11,15 +10,15 @@ type V8Script = { scriptId: string; url: string; functions: V8Function[] };
 
 type V8Options = {
   sourceRoot?: string;
-  readFile?: (filePath: string) => string | undefined;
+  readFile?: (filePath: string) => Promise<string | undefined>;
   warn?: (msg: string) => void;
 };
 
-export function parseV8(
+export async function parseV8(
   content: string,
   filePath: string,
   options: V8Options = {},
-): FileCoverage[] {
+): Promise<FileCoverage[]> {
   const parsed = V8CoverageSchema(content);
   if (parsed instanceof type.errors)
     throw new CrapError(`Invalid coverage file: ${filePath}\n${parsed.summary}`);
@@ -29,9 +28,9 @@ export function parseV8(
 }
 
 function defaultReadFile(warn: (msg: string) => void) {
-  return (filePath: string): string | undefined => {
+  return async (filePath: string): Promise<string | undefined> => {
     try {
-      return fs.readFileSync(filePath, "utf-8");
+      return await Bun.file(filePath).text();
     } catch {
       warn(`Warning: cannot read source file ${filePath}, skipping`);
       return undefined;
@@ -39,16 +38,16 @@ function defaultReadFile(warn: (msg: string) => void) {
   };
 }
 
-function convertScripts(
+async function convertScripts(
   scripts: V8Script[],
   sourceRoot: string,
-  readFile: (filePath: string) => string | undefined,
-): FileCoverage[] {
+  readFile: (filePath: string) => Promise<string | undefined>,
+): Promise<FileCoverage[]> {
   const results: FileCoverage[] = [];
   for (const script of scripts) {
     const resolved = resolveUrl(script.url, sourceRoot);
     if (!resolved) continue;
-    const sourceContent = readFile(resolved);
+    const sourceContent = await readFile(resolved);
     if (!sourceContent) continue;
     const lineOffsets = buildLineOffsets(sourceContent);
     const statements = extractStatements(script.functions, lineOffsets);

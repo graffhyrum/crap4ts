@@ -44,8 +44,8 @@ const report = {
 };
 
 describe("runTriage", () => {
-  test("missing report → exit 2 and message", () => {
-    const { result, exit, message } = runTriage([], {
+  test("missing report → exit 2 and message", async () => {
+    const { result, exit, message } = await runTriage([], {
       cwd: "/proj",
       fs: {
         exists: () => false,
@@ -57,8 +57,8 @@ describe("runTriage", () => {
     expect(result.action).toBeNull();
   });
 
-  test("prints first action and remaining", () => {
-    const { result, exit } = runTriage([], {
+  test("prints first action and remaining", async () => {
+    const { result, exit } = await runTriage([], {
       cwd: "/proj",
       fs: {
         exists: (p) => p === reportPath || p === gatePath,
@@ -87,7 +87,7 @@ describe("runTriage", () => {
     });
   });
 
-  test("--every returns actions when isFlagged false", () => {
+  test("--every returns actions when isFlagged false", async () => {
     const quiet = {
       ...report,
       isFlagged: false,
@@ -96,7 +96,7 @@ describe("runTriage", () => {
       totalFunctions: 20,
       functions: [report.functions[1]],
     };
-    const { result } = runTriage(["--every"], {
+    const { result } = await runTriage(["--every"], {
       cwd: "/proj",
       fs: {
         exists: (p) => p === reportPath || p === gatePath,

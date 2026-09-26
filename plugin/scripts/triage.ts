@@ -1,18 +1,17 @@
-import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { classify } from "./classify";
 import type { GateConfig, ProjectSummary, TriageResult } from "./types";
 import { isInsideRepo, parseGateConfig, parseProjectSummary } from "./types";
 
 export type TriageFs = {
-  exists: (path: string) => boolean;
-  readText: (path: string) => string;
+  exists: (path: string) => boolean | Promise<boolean>;
+  readText: (path: string) => string | Promise<string>;
 };
 
-export function runTriage(
+export async function runTriage(
   argv: string[],
   deps: { cwd: string; fs: TriageFs },
-): { result: TriageResult; exit: 0 | 2; message: string | null } {
+): Promise<{ result: TriageResult; exit: 0 | 2; message: string | null }> {
   const every = argv.includes("--every");
   const reportPath = join(deps.cwd, ".crap4ts", "report.json");
   const configPath = join(deps.cwd, ".crap4ts", "gate.json");
@@ -32,17 +31,17 @@ export function runTriage(
     message,
   });
 
-  if (!deps.fs.exists(reportPath)) {
+  if (!(await deps.fs.exists(reportPath))) {
     return empty("report is missing");
   }
 
-  if (!deps.fs.exists(configPath)) {
+  if (!(await deps.fs.exists(configPath))) {
     return empty("gate config is missing");
   }
 
   let summary: ProjectSummary | null;
   try {
-    summary = parseProjectSummary(JSON.parse(deps.fs.readText(reportPath)));
+    summary = parseProjectSummary(JSON.parse(await deps.fs.readText(reportPath)));
   } catch {
     return empty("report is invalid");
   }
@@ -50,7 +49,7 @@ export function runTriage(
 
   let config: GateConfig | null;
   try {
-    config = parseGateConfig(JSON.parse(deps.fs.readText(configPath)));
+    config = parseGateConfig(JSON.parse(await deps.fs.readText(configPath)));
   } catch {
     return empty("gate config is invalid");
   }
@@ -82,13 +81,13 @@ export function runTriage(
 }
 
 const defaultFs: TriageFs = {
-  exists: (path) => existsSync(path),
-  readText: (path) => readFileSync(path, "utf-8"),
+  exists: (path) => Bun.file(path).exists(),
+  readText: (path) => Bun.file(path).text(),
 };
 
-function main(): number {
+async function main(): Promise<number> {
   try {
-    const { result, exit, message } = runTriage(process.argv.slice(2), {
+    const { result, exit, message } = await runTriage(process.argv.slice(2), {
       cwd: process.cwd(),
       fs: defaultFs,
     });
@@ -114,5 +113,5 @@ function main(): number {
 }
 
 if (import.meta.main) {
-  process.exit(main());
+  process.exit(await main());
 }

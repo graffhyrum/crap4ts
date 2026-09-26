@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { clampText, type BootstrapResult, type GateConfig } from "./types";
@@ -6,8 +6,8 @@ import { clampText, type BootstrapResult, type GateConfig } from "./types";
 export type WhichFn = (command: string) => string | null;
 
 export type FileReader = {
-  exists: (path: string) => boolean;
-  readText: (path: string) => string;
+  exists: (path: string) => boolean | Promise<boolean>;
+  readText: (path: string) => string | Promise<string>;
 };
 
 export type CommandRunner = (
@@ -17,9 +17,9 @@ export type CommandRunner = (
 ) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
 
 export type FileWriter = {
-  writeText: (path: string, contents: string) => void;
+  writeText: (path: string, contents: string) => void | Promise<void>;
   mkdirp: (path: string) => void;
-  copyFile: (from: string, to: string) => void;
+  copyFile: (from: string, to: string) => void | Promise<void>;
 };
 
 const INSTALL_MESSAGE = "bun add -d @graffhyrum/crap4ts";
@@ -103,8 +103,8 @@ export async function runBootstrap(
 
   const bunPath = deps.which("bun");
   let npmrcText: string | null = null;
-  if (deps.reader.exists(npmrcPath)) {
-    npmrcText = deps.reader.readText(npmrcPath);
+  if (await deps.reader.exists(npmrcPath)) {
+    npmrcText = await deps.reader.readText(npmrcPath);
   }
 
   const planned = planBootstrap({ bunPath, npmrcText, apply });
@@ -157,7 +157,7 @@ export async function runBootstrap(
 
     const gateDir = join(deps.cwd, ".crap4ts");
     deps.writer.mkdirp(gateDir);
-    deps.writer.writeText(
+    await deps.writer.writeText(
       join(gateDir, "gate.json"),
       `${JSON.stringify(DEFAULT_GATE, null, 2)}\n`,
     );
@@ -166,7 +166,7 @@ export async function runBootstrap(
   if (ci) {
     const workflowDir = join(deps.cwd, ".github", "workflows");
     deps.writer.mkdirp(workflowDir);
-    deps.writer.copyFile(
+    await deps.writer.copyFile(
       deps.templatePath,
       join(workflowDir, "crap4ts.yml"),
     );
@@ -176,19 +176,20 @@ export async function runBootstrap(
 }
 
 const defaultReader: FileReader = {
-  exists: (path) => existsSync(path),
-  readText: (path) => readFileSync(path, "utf-8"),
+  exists: (path) => Bun.file(path).exists(),
+  readText: (path) => Bun.file(path).text(),
 };
 
 const defaultWriter: FileWriter = {
-  writeText: (path, contents) => writeFileSync(path, contents, "utf-8"),
-  mkdirp: (path) => {
-    if (!existsSync(path)) mkdirSync(path, { recursive: true });
+  writeText: async (path, contents) => {
+    await Bun.write(path, contents);
   },
-  copyFile: (from, to) => {
-    const dir = dirname(to);
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    copyFileSync(from, to);
+  mkdirp: (path) => {
+    mkdirSync(path, { recursive: true });
+  },
+  copyFile: async (from, to) => {
+    mkdirSync(dirname(to), { recursive: true });
+    await Bun.write(to, Bun.file(from), { createPath: false });
   },
 };
 
