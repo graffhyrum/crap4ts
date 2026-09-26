@@ -9,5 +9,8 @@ const line = text.trim();
 if (line.length === 0) {
   throw new Error("empty jsonl record");
 }
-JSON.parse(line);
-appendFileSync(file ?? "logs/findings.jsonl", `${line}\n`);
+const parsed: unknown = JSON.parse(line);
+if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+  throw new Error("jsonl record must be an object");
+}
+appendFileSync(file ?? "logs/findings.jsonl", `${JSON.stringify(parsed)}\n`);

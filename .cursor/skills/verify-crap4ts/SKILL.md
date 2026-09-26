@@ -45,18 +45,18 @@ Expect exit `0` and lines confirming Bun, `package.json` version match, fixtures
 
 ## Drive
 
-Harness = shell + `bun src/index.ts` from repo root. Capture:
+Harness = shell + `bun src/index.ts` from repo root. Give each command its own `<name>` so a later run does not replace an earlier capture:
 
 ```bash
-bun src/index.ts <args> >"$EVIDENCE/stdout.txt" 2>"$EVIDENCE/stderr.txt"
-echo $? >"$EVIDENCE/exit.txt"
+bun src/index.ts <args> >"$EVIDENCE/<name>.stdout.txt" 2>"$EVIDENCE/<name>.stderr.txt"
+echo $? >"$EVIDENCE/<name>.exit.txt"
 ```
 
 PowerShell:
 
 ```powershell
-bun src/index.ts <args> 1>"$EVIDENCE\stdout.txt" 2>"$EVIDENCE\stderr.txt"
-$LASTEXITCODE | Set-Content "$EVIDENCE\exit.txt"
+bun src/index.ts <args> 1>"$EVIDENCE\<name>.stdout.txt" 2>"$EVIDENCE\<name>.stderr.txt"
+$LASTEXITCODE | Set-Content "$EVIDENCE\<name>.exit.txt"
 ```
 
 Stable handles: flag names from `--help`, JSON keys (`totalFunctions`, `crappyCount`, `isFlagged`, `functions[].name`), table footer strings `PASS` / `FLAGGED`, HTML markers `PASS` / `FLAGGED` / `class="crappy"`.
