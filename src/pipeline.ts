@@ -19,7 +19,7 @@ import { renderJson } from "./report/json";
 import { renderHtml } from "./report/html";
 import { isGitignored, loadGitignoreGlobs } from "./gitignore";
 
-export async function runPipeline(config: Config): Promise<number> {
+export async function runPipeline(config: Config): Promise<0 | 1 | 2> {
   const sourceFiles = await resolveSourceFiles(config);
   if (sourceFiles.length === 0) {
     console.error("No source files found.");
