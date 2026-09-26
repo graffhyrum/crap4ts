@@ -73,4 +73,48 @@ describe("configureRunner", () => {
 
     expect(logMessages.some((m) => m.includes("Written:"))).toBe(true);
   });
+
+  test("a write failure is printed and does not throw", async () => {
+    const fs: FileSystem = { exists: async () => false, readText: async () => null };
+    const errors: string[] = [];
+    const orig = console.error;
+    console.error = (msg: string) => {
+      errors.push(msg);
+    };
+    try {
+      await configureRunner(
+        makeAdapter(),
+        PROJECT_ROOT,
+        async () => {
+          throw new Error("disk full");
+        },
+        fs,
+      );
+    } finally {
+      console.error = orig;
+    }
+    expect(errors).toEqual([`Failed to write ${DEST}: disk full`]);
+  });
+
+  test("a non-Error write failure is printed", async () => {
+    const fs: FileSystem = { exists: async () => false, readText: async () => null };
+    const errors: string[] = [];
+    const orig = console.error;
+    console.error = (msg: string) => {
+      errors.push(msg);
+    };
+    try {
+      await configureRunner(
+        makeAdapter(),
+        PROJECT_ROOT,
+        async () => {
+          throw "nope";
+        },
+        fs,
+      );
+    } finally {
+      console.error = orig;
+    }
+    expect(errors).toEqual([`Failed to write ${DEST}: nope`]);
+  });
 });

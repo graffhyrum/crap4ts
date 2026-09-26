@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 import type { FileSystem } from "../types";
 import { bunAdapter, detect } from "./bun";
@@ -83,5 +86,25 @@ describe("bunAdapter", () => {
 
   test("configFilename → bunfig.toml", () => {
     expect(bunAdapter.configFilename()).toBe("bunfig.toml");
+  });
+
+  test("detects this repository as a bun project", async () => {
+    expect(await bunAdapter.detect(process.cwd())).toBe(true);
+  });
+
+  test("setup instructions name the bun test command and the crap4ts command", () => {
+    expect(bunAdapter.getSetupInstructions()).toEqual([
+      "Run: bun test (coverage config is in bunfig.toml)",
+      "Then: crap4ts -c coverage/lcov.info -f lcov",
+    ]);
+  });
+
+  test("detect reports a directory that has no bun project", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "crap-bun-"));
+    try {
+      expect(await bunAdapter.detect(dir)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
