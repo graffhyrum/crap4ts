@@ -1,7 +1,28 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
-import { runTriage } from "./triage";
+import { cliDeps, main, runTriage } from "./triage";
 import { isInsideRepo } from "./types";
+
+async function logged(run: () => Promise<number>) {
+  const out: string[] = [];
+  const err: string[] = [];
+  const log = console.log;
+  const error = console.error;
+  console.log = (message?: unknown) => {
+    out.push(String(message));
+  };
+  console.error = (message?: unknown) => {
+    err.push(String(message));
+  };
+  try {
+    return { code: await run(), out, err };
+  } finally {
+    console.log = log;
+    console.error = error;
+  }
+}
 
 const reportPath = join("/proj", ".crap4ts", "report.json");
 const gatePath = join("/proj", ".crap4ts", "gate.json");
@@ -62,8 +83,7 @@ describe("runTriage", () => {
       cwd: "/proj",
       fs: {
         exists: (p) => p === reportPath || p === gatePath,
-        readText: (p) =>
-          p === gatePath ? JSON.stringify(config) : JSON.stringify(report),
+        readText: (p) => (p === gatePath ? JSON.stringify(config) : JSON.stringify(report)),
       },
     });
     expect(exit).toBe(0);
@@ -100,8 +120,7 @@ describe("runTriage", () => {
       cwd: "/proj",
       fs: {
         exists: (p) => p === reportPath || p === gatePath,
-        readText: (p) =>
-          p === gatePath ? JSON.stringify(config) : JSON.stringify(quiet),
+        readText: (p) => (p === gatePath ? JSON.stringify(config) : JSON.stringify(quiet)),
       },
     });
     expect(result.action).toEqual({
@@ -179,8 +198,7 @@ describe("runTriage", () => {
       cwd: "/proj",
       fs: {
         exists: () => true,
-        readText: (p) =>
-          p === gatePath ? JSON.stringify({ version: 1 }) : JSON.stringify(report),
+        readText: (p) => (p === gatePath ? JSON.stringify({ version: 1 }) : JSON.stringify(report)),
       },
     });
     expect(exit).toBe(2);
@@ -193,12 +211,90 @@ describe("runTriage", () => {
       cwd: "/proj",
       fs: {
         exists: () => true,
-        readText: (p) =>
-          p === gatePath ? JSON.stringify(config) : JSON.stringify(quiet),
+        readText: (p) => (p === gatePath ? JSON.stringify(config) : JSON.stringify(quiet)),
       },
     });
     expect(exit).toBe(2);
     expect(message).toBe("report is invalid");
     expect(result.action).toBeNull();
+  });
+});
+
+describe("triage main", () => {
+  test("prints a missing report and returns 2", async () => {
+    const { code, out, err } = await logged(() =>
+      main([], {
+        cwd: "/proj",
+        fs: { exists: () => false, readText: () => "" },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(err).toEqual(["report is missing"]);
+    expect(JSON.parse(out[0] ?? "").action).toBeNull();
+  });
+
+  test("a thrown filesystem error prints the error and an empty action", async () => {
+    const { code, out, err } = await logged(() =>
+      main([], {
+        cwd: "/proj",
+        fs: {
+          exists: () => {
+            throw new Error("disk full");
+          },
+          readText: () => "",
+        },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(err).toEqual(["disk full"]);
+    expect(JSON.parse(out[0] ?? "")).toEqual({
+      version: 1,
+      isFlagged: false,
+      crappyPercent: 0,
+      action: null,
+      remaining: 0,
+      report: reportPath,
+    });
+  });
+
+  test("a non-Error failure prints triage failed", async () => {
+    const { code, err } = await logged(() =>
+      main([], {
+        cwd: "/proj",
+        fs: {
+          exists: () => {
+            throw "nope";
+          },
+          readText: () => "",
+        },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(err).toEqual(["triage failed"]);
+  });
+
+  test("cli deps read package.json from the current directory", async () => {
+    const deps = cliDeps();
+    const pkg = await deps.fs.readText(join(deps.cwd, "package.json"));
+    expect(pkg).toContain('"name": "@graffhyrum/crap4ts"');
+  });
+
+  test("the script entry reports a missing report", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "crap-triage-"));
+    try {
+      const proc = Bun.spawn([process.execPath, join(import.meta.dir, "triage.ts")], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+        stdin: "ignore",
+      });
+      const stdout = await new Response(proc.stdout).text();
+      const stderr = await new Response(proc.stderr).text();
+      expect(await proc.exited).toBe(2);
+      expect(stderr.trim()).toBe("report is missing");
+      expect(JSON.parse(stdout).action).toBeNull();
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
   });
 });
