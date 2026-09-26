@@ -72,4 +72,20 @@ describe("function-to-coverage matching", () => {
     expect(inner!.coverage).toBe(1);
     expect(outer!.coverage).toBe(1);
   });
+
+  test("a grandchild is excluded from the middle function, not only the outer one", () => {
+    const functions: FunctionInfo[] = [
+      { name: "outer", filePath: abs("a.ts"), startLine: 1, endLine: 20, complexity: 1 },
+      { name: "mid", filePath: abs("a.ts"), startLine: 2, endLine: 10, complexity: 1 },
+      { name: "inner", filePath: abs("a.ts"), startLine: 3, endLine: 5, complexity: 1 },
+    ];
+    const statements = Array.from({ length: 20 }, (_, i) => ({
+      startLine: i + 1,
+      endLine: i + 1,
+      hits: i + 1 >= 3 && i + 1 <= 5 ? 0 : 1,
+    }));
+    const result = matchFunctions(functions, [{ filePath: abs("a.ts"), statements }], 30);
+    expect(result.find((fn) => fn.name === "mid")?.coverage).toBe(1);
+    expect(result.find((fn) => fn.name === "inner")?.coverage).toBe(0);
+  });
 });
