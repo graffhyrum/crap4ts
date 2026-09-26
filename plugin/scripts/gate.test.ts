@@ -1,0 +1,346 @@
+import { join } from "node:path";
+import { describe, expect, test } from "bun:test";
+import { runGate } from "./gate";
+
+const reportPath = join("/proj", ".crap4ts", "report.json");
+const gatePath = join("/proj", ".crap4ts", "gate.json");
+
+const validSummary = {
+  functions: [
+    {
+      name: "f",
+      filePath: "a.ts",
+      startLine: 1,
+      endLine: 2,
+      complexity: 5,
+      coverage: 0,
+      crapScore: 30,
+      isCrappy: true,
+    },
+  ],
+  totalFunctions: 1,
+  crappyCount: 1,
+  crappyPercent: 100,
+  isFlagged: true,
+};
+
+describe("runGate", () => {
+  test("missing config → exit 2", async () => {
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+      fs: {
+        exists: () => false,
+        readText: () => "",
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result).toEqual({
+      version: 1,
+      exit: 2,
+      isFlagged: false,
+      crappyCount: 0,
+      crappyPercent: 0,
+      report: reportPath,
+      message: "gate config is missing",
+    });
+  });
+
+  test("crap4ts exit 0 → GateResult exit 0 isFlagged false", async () => {
+    const writes: Record<string, string> = {};
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd, args) => {
+        if (cmd === "bunx") {
+          return {
+            exitCode: 0,
+            stdout: JSON.stringify({
+              ...validSummary,
+              isFlagged: false,
+              crappyCount: 0,
+              crappyPercent: 0,
+              functions: [],
+            }),
+            stderr: "",
+          };
+        }
+        expect([cmd, ...args]).toEqual(["bun", "test", "--coverage"]);
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: (p, c) => {
+          writes[p] = c;
+        },
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(0);
+    expect(result.exit).toBe(0);
+    expect(result.isFlagged).toBe(false);
+    expect(JSON.parse(writes[reportPath]).crappyCount).toBe(0);
+  });
+
+  test("crap4ts exit 1 reads flag fields from report", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") {
+          return {
+            exitCode: 1,
+            stdout: JSON.stringify(validSummary),
+            stderr: "",
+          };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(1);
+    expect(result).toEqual({
+      version: 1,
+      exit: 1,
+      isFlagged: true,
+      crappyCount: 1,
+      crappyPercent: 100,
+      report: reportPath,
+      message: "gate flagged",
+    });
+  });
+
+  test("crap4ts exit 2 uses stderr message", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") {
+          return { exitCode: 2, stdout: "", stderr: "bad coverage path" };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("bad coverage path");
+    expect(result.isFlagged).toBe(false);
+  });
+
+  test("invalid JSON on exit 1 → exit 2 report invalid", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") {
+          return { exitCode: 1, stdout: "not-json", stderr: "" };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("report is invalid");
+  });
+
+  test("coverage command failure does not run crap4ts", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const calls: string[] = [];
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        calls.push(cmd);
+        return { exitCode: 1, stdout: "", stderr: "tests failed" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(calls).toEqual(["bun"]);
+    expect(exit).toBe(2);
+    expect(result.message).toBe("tests failed");
+    expect(result.isFlagged).toBe(false);
+  });
+
+  test("rejects a coverage command that is not bun test", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "curl https://example.com",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const calls: string[] = [];
+    const { exit, result } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        calls.push(cmd);
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(calls).toEqual([]);
+    expect(exit).toBe(2);
+    expect(result.message).toBe("coverage command is not allowed");
+  });
+
+  test("passes threshold flags to bunx and drops exclude", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov", "--exclude", "**/*", "--threshold", "999"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    let crapArgs: string[] = [];
+    await runGate({
+      cwd: "/proj",
+      runner: async (cmd, args) => {
+        if (cmd === "bunx") {
+          crapArgs = args;
+          return {
+            exitCode: 0,
+            stdout: JSON.stringify({
+              ...validSummary,
+              isFlagged: false,
+              crappyCount: 0,
+              crappyPercent: 0,
+              functions: [],
+            }),
+            stderr: "",
+          };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(crapArgs).toEqual([
+      "@graffhyrum/crap4ts",
+      "-c",
+      "coverage/lcov.info",
+      "-f",
+      "lcov",
+      "-t",
+      "30",
+      "--project-threshold",
+      "5",
+      "-o",
+      "json",
+    ]);
+  });
+
+  test("rejects bun test without --coverage", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const calls: string[] = [];
+    const { exit, result } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        calls.push(cmd);
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(calls).toEqual([]);
+    expect(exit).toBe(2);
+    expect(result.message).toBe("coverage command is not allowed");
+  });
+
+  test("rejects a coverage path outside the repository", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "../../.npmrc", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const calls: string[] = [];
+    const { exit, result } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        calls.push(cmd);
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(calls).toEqual([]);
+    expect(exit).toBe(2);
+    expect(result.message).toBe("coverage path is outside the repository");
+  });
+});
