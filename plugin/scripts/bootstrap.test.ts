@@ -157,4 +157,108 @@ describe("runBootstrap", () => {
     expect(exit).toBe(2);
     expect(result.code).toBe("needs-bun");
   });
+
+  test("bun add failure returns needs-runner", async () => {
+    const { result, exit } = await runBootstrap(["--apply"], {
+      which: () => "/bun",
+      reader: {
+        exists: () => true,
+        readText: () => "//npm.pkg.github.com/:_authToken=tok\n",
+      },
+      runner: async () => ({ exitCode: 1, stdout: "", stderr: "EACCES denied" }),
+      writer: { writeText: () => {}, mkdirp: () => {}, copyFile: () => {} },
+      cwd: "/proj",
+      templatePath: "/plugin/templates/gate.yml",
+    });
+    expect(exit).toBe(2);
+    expect(result).toEqual({
+      version: 1,
+      code: "needs-runner",
+      message: "EACCES denied",
+      reference: null,
+    });
+  });
+
+  test("empty bun add stderr uses the fallback message", async () => {
+    const { result, exit } = await runBootstrap(["--apply"], {
+      which: () => "/bun",
+      reader: {
+        exists: () => true,
+        readText: () => "//npm.pkg.github.com/:_authToken=tok\n",
+      },
+      runner: async () => ({ exitCode: 1, stdout: "", stderr: "" }),
+      writer: { writeText: () => {}, mkdirp: () => {}, copyFile: () => {} },
+      cwd: "/proj",
+      templatePath: "/plugin/templates/gate.yml",
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("bun add failed");
+    expect(result.code).toBe("needs-runner");
+  });
+
+  test("crap4ts --init failure returns needs-runner", async () => {
+    const { result, exit } = await runBootstrap(["--apply"], {
+      which: () => "/bun",
+      reader: {
+        exists: () => true,
+        readText: () => "//npm.pkg.github.com/:_authToken=tok\n",
+      },
+      runner: async (cmd) =>
+        cmd === "bun"
+          ? { exitCode: 0, stdout: "", stderr: "" }
+          : { exitCode: 1, stdout: "", stderr: "init failed hard" },
+      writer: { writeText: () => {}, mkdirp: () => {}, copyFile: () => {} },
+      cwd: "/proj",
+      templatePath: "/plugin/templates/gate.yml",
+    });
+    expect(exit).toBe(2);
+    expect(result).toEqual({
+      version: 1,
+      code: "needs-runner",
+      message: "init failed hard",
+      reference: null,
+    });
+  });
+
+  test("a thrown runner error returns needs-runner", async () => {
+    const { result, exit } = await runBootstrap(["--apply"], {
+      which: () => "/bun",
+      reader: {
+        exists: () => true,
+        readText: () => "//npm.pkg.github.com/:_authToken=tok\n",
+      },
+      runner: async () => {
+        throw new Error("spawn failed");
+      },
+      writer: { writeText: () => {}, mkdirp: () => {}, copyFile: () => {} },
+      cwd: "/proj",
+      templatePath: "/plugin/templates/gate.yml",
+    });
+    expect(exit).toBe(2);
+    expect(result).toEqual({
+      version: 1,
+      code: "needs-runner",
+      message: "spawn failed",
+      reference: null,
+    });
+  });
+
+  test("a non-Error throw uses the runner failed message", async () => {
+    const { result, exit } = await runBootstrap(["--apply"], {
+      which: () => "/bun",
+      reader: {
+        exists: () => true,
+        readText: () => "//npm.pkg.github.com/:_authToken=tok\n",
+      },
+      runner: async () => {
+        throw "nope";
+      },
+      writer: { writeText: () => {}, mkdirp: () => {}, copyFile: () => {} },
+      cwd: "/proj",
+      templatePath: "/plugin/templates/gate.yml",
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("runner failed");
+    expect(result.code).toBe("needs-runner");
+  });
 });
