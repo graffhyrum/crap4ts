@@ -343,4 +343,207 @@ describe("runGate", () => {
     expect(exit).toBe(2);
     expect(result.message).toBe("coverage path is outside the repository");
   });
+
+  test("a config with the wrong version is invalid", async () => {
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () =>
+          JSON.stringify({
+            version: 2,
+            coverageCommand: "bun test --coverage",
+            crapArgs: [],
+            threshold: 30,
+            projectThreshold: 5,
+          }),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("gate config is invalid");
+    expect(result.crappyCount).toBe(0);
+  });
+
+  test("config that is not JSON is invalid", async () => {
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => "not-json{",
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("gate config is invalid");
+  });
+
+  test("crap4ts exit 3 returns the stderr message", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") return { exitCode: 3, stdout: "", stderr: "weird" };
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("weird");
+    expect(result.isFlagged).toBe(false);
+  });
+
+  test("a parsed report with a bad flag field is invalid", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") {
+          return {
+            exitCode: 1,
+            stdout: JSON.stringify({ ...validSummary, isFlagged: "yes" }),
+            stderr: "",
+          };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result).toEqual({
+      version: 1,
+      exit: 2,
+      isFlagged: false,
+      crappyCount: 0,
+      crappyPercent: 0,
+      report: reportPath,
+      message: "report is invalid",
+    });
+  });
+
+  test("a report whose flag disagrees with the project threshold exits 2", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") {
+          return {
+            exitCode: 1,
+            stdout: JSON.stringify({ ...validSummary, isFlagged: false }),
+            stderr: "",
+          };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("report disagrees with the project threshold");
+  });
+
+  test("exit 0 with a flagged report disagrees with the process", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") {
+          return {
+            exitCode: 0,
+            stdout: JSON.stringify(validSummary),
+            stderr: "",
+          };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("report disagrees with the process exit code");
+    expect(result.isFlagged).toBe(false);
+  });
+
+  test("exit 1 with an empty report disagrees with the process", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") {
+          return {
+            exitCode: 1,
+            stdout: JSON.stringify({
+              functions: [],
+              totalFunctions: 0,
+              crappyCount: 0,
+              crappyPercent: 0,
+              isFlagged: false,
+            }),
+            stderr: "",
+          };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("report disagrees with the process exit code");
+  });
 });

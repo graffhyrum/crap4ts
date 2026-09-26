@@ -122,4 +122,83 @@ describe("runTriage", () => {
     expect(isInsideRepo("../secret", "/proj")).toBe(false);
     expect(isInsideRepo("/etc/passwd", "/proj")).toBe(false);
   });
+
+  test("missing gate config exits 2", async () => {
+    const { result, exit, message } = await runTriage([], {
+      cwd: "/proj",
+      fs: {
+        exists: (p) => p === reportPath,
+        readText: () => JSON.stringify(report),
+      },
+    });
+    expect(exit).toBe(2);
+    expect(message).toBe("gate config is missing");
+    expect(result.action).toBeNull();
+    expect(result.report).toBe(reportPath);
+  });
+
+  test("a report that is not JSON exits 2", async () => {
+    const { result, exit, message } = await runTriage([], {
+      cwd: "/proj",
+      fs: {
+        exists: () => true,
+        readText: (p) => (p === gatePath ? JSON.stringify(config) : "not-json"),
+      },
+    });
+    expect(exit).toBe(2);
+    expect(message).toBe("report is invalid");
+    expect(result.action).toBeNull();
+  });
+
+  test("a report that parses but fails the schema exits 2", async () => {
+    const { message, exit } = await runTriage([], {
+      cwd: "/proj",
+      fs: {
+        exists: () => true,
+        readText: (p) => (p === gatePath ? JSON.stringify(config) : "{}"),
+      },
+    });
+    expect(exit).toBe(2);
+    expect(message).toBe("report is invalid");
+  });
+
+  test("a gate config that is not JSON exits 2", async () => {
+    const { message, exit } = await runTriage([], {
+      cwd: "/proj",
+      fs: {
+        exists: () => true,
+        readText: (p) => (p === gatePath ? "{" : JSON.stringify(report)),
+      },
+    });
+    expect(exit).toBe(2);
+    expect(message).toBe("gate config is invalid");
+  });
+
+  test("a gate config that parses but fails the schema exits 2", async () => {
+    const { message, exit } = await runTriage([], {
+      cwd: "/proj",
+      fs: {
+        exists: () => true,
+        readText: (p) =>
+          p === gatePath ? JSON.stringify({ version: 1 }) : JSON.stringify(report),
+      },
+    });
+    expect(exit).toBe(2);
+    expect(message).toBe("gate config is invalid");
+  });
+
+  test("a flag that disagrees with the project threshold exits 2", async () => {
+    const quiet = { ...report, isFlagged: false };
+    const { message, exit, result } = await runTriage([], {
+      cwd: "/proj",
+      fs: {
+        exists: () => true,
+        readText: (p) =>
+          p === gatePath ? JSON.stringify(config) : JSON.stringify(quiet),
+      },
+    });
+    expect(exit).toBe(2);
+    expect(message).toBe("report is invalid");
+    expect(result.action).toBeNull();
+  });
 });
