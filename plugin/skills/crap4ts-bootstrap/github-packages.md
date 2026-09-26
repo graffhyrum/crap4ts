@@ -11,3 +11,7 @@ Also set:
 ```
 
 Do not invent a token. Use a token the user already has or create one in GitHub settings.
+
+## CI
+
+The copied workflow sets `packages: read` and writes `~/.npmrc` from `secrets.GITHUB_TOKEN`. That token can install `@graffhyrum/crap4ts` only after the workflow repository is granted read access to the package. Do not put a personal token in the workflow file.

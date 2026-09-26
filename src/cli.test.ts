@@ -27,6 +27,14 @@ describe("CLI parsing", () => {
     expect(() => parseCli(["node", "crap4ts", "-f", "bad"])).toThrow(CrapError);
   });
 
+  test("unknown option throws CrapError", () => {
+    expect(() => parseCli(["node", "crap4ts", "--nope"])).toThrow(CrapError);
+  });
+
+  test("missing option value throws CrapError", () => {
+    expect(() => parseCli(["node", "crap4ts", "-c"])).toThrow(CrapError);
+  });
+
   test("throws on invalid output", () => {
     expect(() => parseCli(["node", "crap4ts", "-o", "bad"])).toThrow(CrapError);
   });

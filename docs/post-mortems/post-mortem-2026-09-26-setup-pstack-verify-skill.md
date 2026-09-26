@@ -105,10 +105,16 @@ Gap: create-verification-skill / setup-pstack / maintain-verification-skill were
 
 ```bash
 # Dedup check before creating a tracker item:
-tracker search "setup-pstack rules directory" 2>/dev/null | grep -q "." && echo "SIMILAR ITEM EXISTS — skip" || \
+if ! search_result=$(tracker search "setup-pstack rules directory" 2>/dev/null); then
+  echo "tracker search failed; not creating a task" >&2
+  exit 1
+elif printf '%s\n' "$search_result" | grep -q "."; then
+  echo "SIMILAR ITEM EXISTS — skip"
+else
   tracker create --title="Harden setup-pstack rules file→dir migration docs" \
     --description="Identified in post-mortem 2026-09-26" \
     --type task --priority p3
+fi
 ```
 
 ## Candidate Rules (for cm reflect)

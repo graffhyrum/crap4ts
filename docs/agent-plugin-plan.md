@@ -100,7 +100,7 @@ Descriptions are one sentence. Bodies are routers. A skill reads at most one ref
 
 Bootstrap does not score. The gate skill does not choose an edit. Triage does not install.
 
-Bootstrap without `--apply` prints `bun add` and stops. It does not invent a GitHub token. With `--apply`, it installs, runs `bunx crap4ts --init`, and writes the default `GateConfig`. It does not parse `--init` stdout. With `--ci`, it copies `templates/gate.yml` to `.github/workflows/crap4ts.yml`. The workflow runs `bun test --coverage`, then `bunx crap4ts` with the same default coverage path and thresholds. It fails on exit 1.
+Bootstrap without `--apply` prints `bun add` and stops. It does not invent a GitHub token. With `--apply`, it installs, runs `bunx crap4ts --init`, and writes the default `GateConfig`. It does not parse `--init` stdout. With `--ci`, it copies `templates/gate.yml` to `.github/workflows/crap4ts.yml`. The workflow authenticates to GitHub Packages with `secrets.GITHUB_TOKEN` and `packages: read`, then runs `bun test --coverage` and `bunx crap4ts` with the same default coverage path and thresholds. The token works only after that repository is granted read access to the package. The workflow fails on exit 1.
 
 `gate.ts` and bootstrap spawn `bunx crap4ts`, not a bare `crap4ts` on `PATH`.
 

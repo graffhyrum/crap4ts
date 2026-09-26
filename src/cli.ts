@@ -10,27 +10,41 @@ export function parseCli(argv: string[]): Config {
 }
 
 function parseArgv(argv: string[]) {
-  return parseArgs({
-    args: argv.slice(2),
-    options: {
-      coverage: { type: "string", short: "c" },
-      format: { type: "string", short: "f" },
-      threshold: { type: "string", short: "t" },
-      "project-threshold": { type: "string" },
-      output: { type: "string", short: "o" },
-      "output-file": { type: "string" },
-      sort: { type: "string" },
-      "only-crappy": { type: "boolean" },
-      all: { type: "boolean" },
-      include: { type: "string" },
-      exclude: { type: "string" },
-      init: { type: "boolean" },
-      "no-gitignore": { type: "boolean" },
-      help: { type: "boolean", short: "h" },
-      version: { type: "boolean" },
-    },
-    allowPositionals: true,
-  });
+  try {
+    return parseArgs({
+      args: argv.slice(2),
+      options: {
+        coverage: { type: "string", short: "c" },
+        format: { type: "string", short: "f" },
+        threshold: { type: "string", short: "t" },
+        "project-threshold": { type: "string" },
+        output: { type: "string", short: "o" },
+        "output-file": { type: "string" },
+        sort: { type: "string" },
+        "only-crappy": { type: "boolean" },
+        all: { type: "boolean" },
+        include: { type: "string" },
+        exclude: { type: "string" },
+        init: { type: "boolean" },
+        "no-gitignore": { type: "boolean" },
+        help: { type: "boolean", short: "h" },
+        version: { type: "boolean" },
+      },
+      allowPositionals: true,
+    });
+  } catch (error) {
+    if (!isParseArgsError(error)) throw error;
+    throw new CrapError(error.message);
+  }
+}
+
+function isParseArgsError(error: unknown): error is Error {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.startsWith("ERR_PARSE_ARGS_")
+  );
 }
 
 type ParsedValues = ReturnType<typeof parseArgv>["values"];
