@@ -1,0 +1,13 @@
+name: crap4ts-ci
+on:
+  push:
+  pull_request:
+jobs:
+  crap4ts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun test --coverage
+      - run: bunx crap4ts -c coverage/lcov.info -f lcov -t 30 --project-threshold 5 -o json
