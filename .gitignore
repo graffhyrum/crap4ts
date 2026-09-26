@@ -16,3 +16,6 @@ yarn-error.log*
 
 .mcp_data
 /coverage/
+
+.audit/
+.specstory/
