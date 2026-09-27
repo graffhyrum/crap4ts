@@ -43,6 +43,34 @@ describe("bun file io", () => {
     }
   });
 
+  test("read fails when the file is missing", async () => {
+    const dir = tempDir();
+    try {
+      await expect(bunReadText(join(dir, "missing.txt"))).rejects.toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("copy does not create a destination directory when the source is missing", async () => {
+    const dir = tempDir();
+    const destDir = join(dir, "nested");
+    try {
+      await expect(bunCopyFile(join(dir, "missing.txt"), join(destDir, "out.txt"))).rejects.toThrow();
+      expect(existsSync(destDir)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  test("copy fails when the source is missing", async () => {
+    const dir = tempDir();
+    try {
+      await expect(bunCopyFile(join(dir, "missing.txt"), join(dir, "out.txt"))).rejects.toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("creates a directory", () => {
     const dir = tempDir();
     const nested = join(dir, "a", "b");

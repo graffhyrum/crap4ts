@@ -33,6 +33,11 @@ describe("hasGithubPackagesToken", () => {
     expect(hasGithubPackagesToken(npmrc)).toBe(true);
   });
 
+  test("rejects an empty token", () => {
+    const npmrc = "//npm.pkg.github.com/:_authToken=\n";
+    expect(hasGithubPackagesToken(npmrc)).toBe(false);
+  });
+
   test("rejects registry-only npmrc", () => {
     const npmrc = "@graffhyrum:registry=https://npm.pkg.github.com\n";
     expect(hasGithubPackagesToken(npmrc)).toBe(false);
@@ -118,7 +123,7 @@ describe("runBootstrap", () => {
     const gatePath = join("/proj", ".crap4ts", "gate.json");
     expect(writes[gatePath]).toContain('"coverageCommand": "bun test --coverage"');
     expect(writes[gatePath]).toContain('"threshold": 30');
-    expect(writes[gatePath]).toContain('"projectThreshold": 5');
+    expect(writes[gatePath]).toContain('"projectThreshold": 0');
   });
 
   test("--ci copies workflow template", async () => {
@@ -312,6 +317,29 @@ describe("bootstrap main", () => {
     expect(code).toBe(2);
     expect(JSON.parse(out[0] ?? "").message).toBe("disk full");
     expect(JSON.parse(out[0] ?? "").code).toBe("needs-runner");
+  });
+
+  test("a writer failure hides an auth token", async () => {
+    const { code, out } = await logged(() =>
+      main(["--apply"], {
+        which: () => "/bun",
+        reader: {
+          exists: () => true,
+          readText: () => "//npm.pkg.github.com/:_authToken=tok\n",
+        },
+        runner: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+        writer: {
+          ...writer,
+          writeText: () => {
+            throw new Error("write failed _authToken=tok");
+          },
+        },
+        cwd: "/proj",
+        templatePath: "/plugin/templates/gate.yml",
+      }),
+    );
+    expect(code).toBe(2);
+    expect(JSON.parse(out[0] ?? "").message).toBe("bootstrap failed");
   });
 
   test("a non-Error failure prints bootstrap failed", async () => {
