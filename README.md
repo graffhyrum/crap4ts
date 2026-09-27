@@ -69,7 +69,7 @@ crap4ts -c v8-coverage.json -f v8 --sort complexity
 | `--coverage` | `-c` | `./coverage/coverage-final.json` | Coverage file path |
 | `--format` | `-f` | auto-detect | Coverage format: `istanbul`, `lcov`, `v8` |
 | `--threshold` | `-t` | `30` | CRAP score threshold |
-| `--project-threshold` | | `5` | % of crappy functions that flags the project |
+| `--project-threshold` | | `0` | % of crappy functions that flags the project |
 | `--output` | `-o` | `table` | Report format: `table`, `json`, `html` |
 | `--output-file` | | stdout | Write report to file |
 | `--sort` | | `score` | Sort by: `score`, `name`, `complexity`, `coverage` |

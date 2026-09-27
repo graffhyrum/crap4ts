@@ -40,7 +40,7 @@ function buildConfig(values: ParsedValues, positionals: string[]): Config {
     coveragePath: asString(values.coverage, "./coverage/coverage-final.json"),
     format: validateEnum(values.format, ["istanbul", "lcov", "v8"] as const, "format"),
     threshold: validateThreshold(values.threshold, 30),
-    projectThreshold: validateThreshold(values["project-threshold"], 5),
+    projectThreshold: validateThreshold(values["project-threshold"], 0),
     output: validateEnum(values.output, ["table", "json", "html"] as const, "output") ?? "table",
     outputFile: asStringOrUndef(values["output-file"]),
     sort:
@@ -92,7 +92,7 @@ Options:
   -c, --coverage <path>         Coverage file (default: ./coverage/coverage-final.json)
   -f, --format <format>         Coverage format: istanbul | lcov | v8 (default: auto-detect)
   -t, --threshold <number>      CRAP score threshold (default: 30)
-      --project-threshold <n>   % crappy methods to flag project (default: 5)
+      --project-threshold <n>   % crappy methods to flag project (default: 0)
   -o, --output <format>         Output format: table | json | html (default: table)
       --output-file <path>      Write report to file
       --sort <field>            Sort by: score | name | complexity | coverage (default: score)
