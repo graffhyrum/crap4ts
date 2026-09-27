@@ -94,7 +94,7 @@ async function readAndParseCoverage(config: Config, fs: FileSystem): Promise<Fil
   if (!(await fs.exists(covPath))) throw new CrapError(`Coverage file not found: ${covPath}`);
   const content = await fs.readText(covPath);
   if (content === null) throw new CrapError(`Coverage file not found: ${covPath}`);
-  return await parseCoverage(content, covPath, config.format);
+  return await parseCoverage(content, covPath, config.format, { fs });
 }
 
 function sortFunctions(functions: FunctionCrap[], sort: SortField): FunctionCrap[] {

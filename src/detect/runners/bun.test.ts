@@ -6,6 +6,7 @@ function makeFs(overrides: Partial<FileSystem> = {}): FileSystem {
   return {
     exists: async () => false,
     readText: async () => null,
+    realPath: async (p) => p,
     ...overrides,
   };
 }

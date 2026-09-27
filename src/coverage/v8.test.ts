@@ -1,12 +1,22 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { describe, expect, test } from "bun:test";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import type { FileSystem } from "../detect/types";
 import { CrapError } from "../types";
 import { parseV8 } from "./v8";
 
 const source = "function a() {\n  return 1;\n}\n";
+
+function fsOf(
+  readText: (filePath: string) => Promise<string | null>,
+  realPath: (filePath: string) => string = (filePath) => filePath,
+): FileSystem {
+  return {
+    exists: async () => true,
+    readText,
+    realPath: async (filePath) => realPath(filePath),
+  };
+}
 
 function payload(url: string): string {
   return JSON.stringify({ result: [script(url, "1")] });
@@ -46,7 +56,7 @@ describe("V8 parser", () => {
   test("maps a relative url onto source lines", async () => {
     const result = await parseV8(payload("src/a.ts"), "v8.json", {
       sourceRoot: "/repo",
-      readFile: async () => source,
+      fs: fsOf(async () => source),
     });
     expect(result).toHaveLength(1);
     expect(result[0]?.filePath).toBe(path.resolve("/repo", "src/a.ts"));
@@ -67,10 +77,10 @@ describe("V8 parser", () => {
     const reads: string[] = [];
     const result = await parseV8(content, "v8.json", {
       sourceRoot: process.cwd(),
-      readFile: async (filePath) => {
+      fs: fsOf(async (filePath) => {
         reads.push(filePath);
         return source;
-      },
+      }),
     });
     expect(reads).toEqual([fileURLToPath(fileUrl), absolute]);
     expect(result).toHaveLength(2);
@@ -84,10 +94,10 @@ describe("V8 parser", () => {
     const reads: string[] = [];
     const result = await parseV8(content, "v8.json", {
       sourceRoot: process.cwd(),
-      readFile: async (filePath) => {
+      fs: fsOf(async (filePath) => {
         reads.push(filePath);
         return source;
-      },
+      }),
     });
     expect(reads).toEqual([]);
     expect(result).toEqual([]);
@@ -103,7 +113,7 @@ describe("V8 parser", () => {
   test("reads a file whose name starts with two dots", async () => {
     const result = await parseV8(payload("..generated/a.ts"), "v8.json", {
       sourceRoot: "/repo",
-      readFile: async () => source,
+      fs: fsOf(async () => source),
     });
     expect(result).toHaveLength(1);
     expect(result[0]?.filePath).toBe(path.resolve("/repo", "..generated/a.ts"));
@@ -112,7 +122,7 @@ describe("V8 parser", () => {
   test("throws when an offset is past the end of an empty source", async () => {
     await expect(
       parseV8(payloadWithRange(0, 1, 1), "bad.json", {
-        readFile: async () => "",
+        fs: fsOf(async () => ""),
       }),
     ).rejects.toThrow(CrapError);
   });
@@ -120,34 +130,47 @@ describe("V8 parser", () => {
   test("throws when an offset is past the end of the source", async () => {
     await expect(
       parseV8(payloadWithRange(0, 9999, 1), "bad.json", {
-        readFile: async () => "hi\n",
+        fs: fsOf(async () => "hi\n"),
       }),
     ).rejects.toThrow(CrapError);
   });
 
-  test("does not read a symlink whose target is outside the source root", async () => {
-    const root = mkdtempSync(path.join(tmpdir(), "crap-v8-"));
-    const outside = mkdtempSync(path.join(tmpdir(), "crap-v8-out-"));
-    const secret = path.join(outside, "secret.ts");
-    writeFileSync(secret, "export const x = 1;\n");
-    mkdirSync(root, { recursive: true });
+  test("does not read a path whose real path is outside the source root", async () => {
+    const root = path.resolve("/repo");
     const link = path.join(root, "link.ts");
-    symlinkSync(secret, link);
+    const outside = path.resolve("/outside/secret.ts");
     const reads: string[] = [];
-    try {
-      const result = await parseV8(payload(link), "v8.json", {
-        sourceRoot: root,
-        readFile: async (filePath) => {
+    const result = await parseV8(payload(link), "v8.json", {
+      sourceRoot: root,
+      fs: fsOf(
+        async (filePath) => {
           reads.push(filePath);
           return source;
         },
-      });
-      expect(reads).toEqual([]);
-      expect(result).toEqual([]);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-      rmSync(outside, { recursive: true, force: true });
-    }
+        (filePath) => (filePath === link ? outside : filePath),
+      ),
+    });
+    expect(reads).toEqual([]);
+    expect(result).toEqual([]);
+  });
+
+  test("reads the canonical path when it stays inside the source root", async () => {
+    const root = path.resolve("/repo");
+    const link = path.join(root, "link.ts");
+    const target = path.join(root, "src", "real.ts");
+    const reads: string[] = [];
+    const result = await parseV8(payload(link), "v8.json", {
+      sourceRoot: root,
+      fs: fsOf(
+        async (filePath) => {
+          reads.push(filePath);
+          return source;
+        },
+        (filePath) => (filePath === link ? target : filePath),
+      ),
+    });
+    expect(reads).toEqual([target]);
+    expect(result[0]?.filePath).toBe(target);
   });
 
   test("warns and skips a source file it cannot read", async () => {

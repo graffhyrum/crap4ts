@@ -1,7 +1,8 @@
-import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { type } from "arktype";
 import path from "path";
+import { bunFileSystem } from "../detect/fs";
+import type { FileSystem } from "../detect/types";
 import type { FileCoverage, StatementCoverage } from "../types";
 import { CrapError } from "../types";
 import { V8CoverageSchema, V8FunctionSchema, V8RangeSchema, V8ScriptSchema } from "../schemas";
@@ -12,8 +13,13 @@ type V8Script = typeof V8ScriptSchema.infer;
 
 type V8Options = {
   sourceRoot?: string;
-  readFile?: (filePath: string) => Promise<string | undefined>;
+  fs?: FileSystem;
   warn?: (msg: string) => void;
+};
+
+type OpenedSource = {
+  filePath: string;
+  text: string;
 };
 
 export async function parseV8(
@@ -25,47 +31,63 @@ export async function parseV8(
   if (parsed instanceof type.errors)
     throw new CrapError(`Invalid coverage file: ${filePath}\n${parsed.summary}`);
   const sourceRoot = options.sourceRoot ?? process.cwd();
-  const readFileFn = options.readFile ?? defaultReadFile(options.warn ?? console.warn);
-  return convertScripts(parsed.result, sourceRoot, readFileFn);
-}
-
-function defaultReadFile(warn: (msg: string) => void) {
-  return async (filePath: string): Promise<string | undefined> => {
-    try {
-      return await Bun.file(filePath).text();
-    } catch {
-      warn(`Warning: cannot read source file ${filePath}, skipping`);
-      return undefined;
-    }
-  };
+  const fs = options.fs ?? bunFileSystem;
+  const warn = options.warn ?? console.warn;
+  return convertScripts(parsed.result, sourceRoot, fs, warn);
 }
 
 async function convertScripts(
   scripts: V8Script[],
   sourceRoot: string,
-  readFile: (filePath: string) => Promise<string | undefined>,
+  fs: FileSystem,
+  warn: (msg: string) => void,
 ): Promise<FileCoverage[]> {
   const results: FileCoverage[] = [];
+  const root = await fs.realPath(path.resolve(sourceRoot));
   for (const script of scripts) {
-    const resolved = resolveUrl(script.url, sourceRoot);
-    if (!resolved) continue;
-    const sourceContent = await readFile(resolved);
-    if (sourceContent === undefined) continue;
-    if (offsetPastEnd(script.functions, sourceContent.length)) {
-      throw new CrapError(`Invalid coverage file: offset past end of ${resolved}`);
+    const opened = await openInsideRoot(script.url, root, fs, warn);
+    if (!opened) continue;
+    if (offsetPastEnd(script.functions, opened.text.length)) {
+      throw new CrapError(`Invalid coverage file: offset past end of ${opened.filePath}`);
     }
-    const lineOffsets = buildLineOffsets(sourceContent);
+    const lineOffsets = buildLineOffsets(opened.text);
     const statements = extractStatements(script.functions, lineOffsets);
-    results.push({ filePath: resolved, statements });
+    results.push({ filePath: opened.filePath, statements });
   }
   return results;
 }
 
-function resolveUrl(url: string, sourceRoot: string): string | undefined {
-  const resolved = pathFromCoverageUrl(url, sourceRoot);
-  if (resolved === undefined) return undefined;
-  if (!isInsideRoot(resolved, sourceRoot)) return undefined;
-  return resolved;
+async function openInsideRoot(
+  url: string,
+  root: string,
+  fs: FileSystem,
+  warn: (msg: string) => void,
+): Promise<OpenedSource | undefined> {
+  const logical = pathFromCoverageUrl(url, root);
+  if (logical === undefined) return undefined;
+  const filePath = await fs.realPath(logical);
+  if (!isInsideRoot(filePath, root)) return undefined;
+  const text = await readSource(filePath, fs, warn);
+  if (text === undefined) return undefined;
+  return { filePath, text };
+}
+
+async function readSource(
+  filePath: string,
+  fs: FileSystem,
+  warn: (msg: string) => void,
+): Promise<string | undefined> {
+  try {
+    const text = await fs.readText(filePath);
+    if (text === null) {
+      warn(`Warning: cannot read source file ${filePath}, skipping`);
+      return undefined;
+    }
+    return text;
+  } catch {
+    warn(`Warning: cannot read source file ${filePath}, skipping`);
+    return undefined;
+  }
 }
 
 function pathFromCoverageUrl(url: string, sourceRoot: string): string | undefined {
@@ -84,20 +106,9 @@ function fileUrlPath(url: string): string | undefined {
 }
 
 function isInsideRoot(filePath: string, sourceRoot: string): boolean {
-  const rel = path.relative(
-    canonicalize(path.resolve(sourceRoot)),
-    canonicalize(path.resolve(filePath)),
-  );
+  const rel = path.relative(sourceRoot, filePath);
   if (rel === "" || path.isAbsolute(rel)) return false;
   return !rel.split(/[/\\]/).includes("..");
-}
-
-function canonicalize(filePath: string): string {
-  try {
-    return realpathSync(filePath);
-  } catch {
-    return filePath;
-  }
 }
 
 function offsetPastEnd(functions: V8Function[], sourceLength: number): boolean {

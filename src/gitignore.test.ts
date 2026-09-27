@@ -7,6 +7,7 @@ function makeFs(content: string | null): FileSystem {
   return {
     exists: async () => content !== null,
     readText: async () => content,
+    realPath: async (p) => p,
   };
 }
 

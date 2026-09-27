@@ -8,6 +8,7 @@ function makeFs(files: Record<string, string>): FileSystem {
   return {
     exists: async (p) => Object.hasOwn(files, p),
     readText: async (p) => files[p] ?? null,
+    realPath: async (p) => p,
   };
 }
 
