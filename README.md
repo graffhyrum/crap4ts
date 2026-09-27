@@ -104,8 +104,11 @@ crap4ts -c v8-coverage.json -f v8 --sort complexity
 ```bash
 bun test          # Run tests
 bun run check     # Type check with tsc
-bun run vet       # Lint, format, typecheck, and test
+bun run score     # CRAP-score this repo (needs coverage/lcov.info)
+bun run vet       # Lint, format, typecheck, and gates
 ```
+
+`bun run gate` runs the repo rules, `bun test --coverage`, then `bun run score`. The score uses `coverage/lcov.info` on `src` and `plugin` and skips `*.test.ts`. The project limit is 0. Exit 1 means this repo has a crappy function.
 
 ### Releases
 
