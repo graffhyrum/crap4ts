@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { clampText, isUnsafeText, parseTriageResult, type TriageResult } from "../scripts/types";
+import { parseTriageResult, scrubText, type TriageResult } from "../scripts/types";
 export type StopHookInput = {
   status: string;
   loop_count: number;
@@ -15,12 +15,18 @@ export type StopDeps = {
     exit: 0 | 1 | 2;
     message?: string;
   }>;
-  runTriage: () => Promise<{
-    result: TriageResult;
-    exit: 0 | 2;
-    stderr?: string;
-  }>;
+  runTriage: () => Promise<SpawnedTriage>;
 };
+export type SpawnedTriage =
+  | {
+      result: TriageResult;
+      exit: 0;
+    }
+  | {
+      result: null;
+      exit: 2;
+      stderr?: string;
+    };
 if (import.meta.main) process.exit(await main(await Bun.stdin.text()));
 
 export async function main(stdinText: string): Promise<number> {
@@ -58,26 +64,23 @@ export async function runSpawnedGate(scriptPath: string): Promise<{
   return parseGateStop(stdout, exitCode);
 }
 
-export async function runSpawnedTriage(
-  scriptPath: string,
-  cwd: string,
-): Promise<{ result: TriageResult; exit: 0 | 2; stderr?: string }> {
+export async function runSpawnedTriage(scriptPath: string, cwd: string): Promise<SpawnedTriage> {
   const { exitCode, stdout, stderr } = await spawnScript(scriptPath);
   if (exitCode !== 0) {
-    return { result: emptyTriage(), exit: 2, stderr };
+    return { result: null, exit: 2, stderr };
   }
   try {
     const rawTriage: unknown = JSON.parse(stdout);
     const result = parseTriageResult(rawTriage, cwd);
-    if (result === null) return { result: emptyTriage(), exit: 2 };
+    if (result === null) return { result: null, exit: 2 };
     return { result, exit: 0 };
   } catch {
-    return { result: emptyTriage(), exit: 2 };
+    return { result: null, exit: 2 };
   }
 }
 export function parseStopInput(raw: unknown): StopHookInput {
-  if (typeof raw !== "object" || raw === null) throw new Error("bad stop input");
-  const record = raw as Record<string, unknown>;
+  if (!isRecord(raw)) throw new Error("bad stop input");
+  const record = raw;
   if (typeof record.status !== "string" || badStatus(record.status)) {
     throw new Error("bad stop input");
   }
@@ -103,20 +106,27 @@ export async function decideStop(input: StopHookInput, deps: StopDeps): Promise<
     };
   }
   const gate = await deps.runGate();
-  if (gate.exit === 0) return {};
-  if (gate.exit === 2) {
-    const detail = clampText(gate.message ?? "", "Fix the setup.");
-    const shown = isUnsafeText(detail) ? "Fix the setup." : detail;
-    return {
-      followup_message: `The gate did not score the project. ${shown} Run the crap4ts-gate skill.`,
-    };
+  switch (gate.exit) {
+    case 0:
+      return {};
+    case 2: {
+      const shown = scrubText(gate.message ?? "", "Fix the setup.");
+      return {
+        followup_message: `The gate did not score the project. ${endSentence(shown)} Run the crap4ts-gate skill.`,
+      };
+    }
+    case 1:
+      break;
+    default: {
+      const exhaustive: never = gate.exit;
+      return exhaustive;
+    }
   }
   const triage = await deps.runTriage();
   if (triage.exit !== 0) {
-    const detail = clampText(triage.stderr ?? "", "Triage did not return an action.");
-    const shown = isUnsafeText(detail) ? "Triage did not return an action." : detail;
+    const shown = scrubText(triage.stderr ?? "", "Triage did not return an action.");
     return {
-      followup_message: `The gate flagged the project. ${shown} Run the crap4ts-gate skill.`,
+      followup_message: `The gate flagged the project. ${endSentence(shown)} Run the crap4ts-triage skill.`,
     };
   }
   const action = triage.result.action;
@@ -161,8 +171,8 @@ export function parseGateStop(
   const invalid = { exit: 2 as const, message: "gate did not return JSON" };
   try {
     const raw: unknown = JSON.parse(stdout);
-    if (typeof raw !== "object" || raw === null) return invalid;
-    const record = raw as Record<string, unknown>;
+    if (!isRecord(raw)) return invalid;
+    const record = raw;
     if (record.version !== 1) return invalid;
     if (record.exit !== 0 && record.exit !== 1 && record.exit !== 2) return invalid;
     if (typeof record.message !== "string") return invalid;
@@ -173,19 +183,15 @@ export function parseGateStop(
     if ((record.exit === 0 && record.isFlagged) || (record.exit === 1 && !record.isFlagged)) {
       return { exit: 2, message: "gate report disagrees with its exit code" };
     }
-    const message = isUnsafeText(record.message) ? "Fix the setup." : record.message;
+    const message = scrubText(record.message, "Fix the setup.");
     return { exit: record.exit, message };
   } catch {
     return invalid;
   }
 }
-function emptyTriage(): TriageResult {
-  return {
-    version: 1,
-    isFlagged: false,
-    crappyPercent: 0,
-    action: null,
-    remaining: 0,
-    report: "",
-  };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function endSentence(shown: string): string {
+  return shown.endsWith(".") ? shown : `${shown}.`;
 }

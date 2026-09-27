@@ -305,17 +305,11 @@ describe("classify", () => {
     const byLine = classify(
       summary({
         ...flagged,
-        functions: [
-          fn({ name: "later", startLine: 20 }),
-          fn({ name: "earlier", startLine: 10 }),
-        ],
+        functions: [fn({ name: "later", startLine: 20 }), fn({ name: "earlier", startLine: 10 })],
       }),
       30,
     );
-    expect(byLine.actions.map((action) => action.name)).toEqual([
-      "earlier",
-      "later",
-    ]);
+    expect(byLine.actions.map((action) => action.name)).toEqual(["earlier", "later"]);
 
     const byPath = classify(
       summary({
@@ -327,10 +321,7 @@ describe("classify", () => {
       }),
       30,
     );
-    expect(byPath.actions.map((action) => action.filePath)).toEqual([
-      "a.ts",
-      "z.ts",
-    ]);
+    expect(byPath.actions.map((action) => action.filePath)).toEqual(["a.ts", "z.ts"]);
 
     const byName = classify(
       summary({

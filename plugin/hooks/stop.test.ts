@@ -115,7 +115,7 @@ describe("decideStop", () => {
       ),
     ).toEqual({
       followup_message:
-        "The gate did not score the project. coverage command is not allowed Run the crap4ts-gate skill.",
+        "The gate did not score the project. coverage command is not allowed. Run the crap4ts-gate skill.",
     });
   });
 
@@ -253,27 +253,32 @@ describe("decideStop", () => {
           gateScriptExists: true,
           triageScriptExists: true,
           runGate: async () => ({ exit: 1, message: "gate flagged" }),
-          runTriage: async () => ({ result: emptyTriage, exit: 2, stderr: "bad; rm -rf /" }),
+          runTriage: async () => ({ result: null, exit: 2, stderr: "bad; rm -rf /" }),
         },
       ),
     ).toEqual({
       followup_message:
-        "The gate flagged the project. Triage did not return an action. Run the crap4ts-gate skill.",
+        "The gate flagged the project. Triage did not return an action. Run the crap4ts-triage skill.",
     });
   });
 
   test("bad stdin prints a followup and exits 0", async () => {
-    const proc = Bun.spawn([process.execPath, "plugin/hooks/stop.ts"], {
+    const proc = Bun.spawn([process.execPath, join(import.meta.dir, "stop.ts")], {
       stdin: new Blob(["not json"]),
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, exitCode] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+    const [stdout, , exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
     expect(exitCode).toBe(0);
     expect(stdout).toContain("The crap4ts stop hook failed.");
   });
 
   test("parseStopInput rejects a bad hook payload", () => {
+    expect(() => parseStopInput([])).toThrow("bad stop input");
     expect(() => parseStopInput(null)).toThrow("bad stop input");
     expect(() => parseStopInput({ status: 1, loop_count: 0 })).toThrow("bad stop input");
     expect(() => parseStopInput({ status: "ok\n", loop_count: 0 })).toThrow("bad stop input");
@@ -408,8 +413,9 @@ describe("spawned gate and triage", () => {
     try {
       const result = await runSpawnedTriage(script, process.cwd());
       expect(result.exit).toBe(2);
+      if (result.exit !== 2) return;
       expect(result.stderr).toContain("disk full");
-      expect(result.result.action).toBeNull();
+      expect(result.result).toBeNull();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -422,14 +428,7 @@ describe("spawned gate and triage", () => {
     try {
       const result = await runSpawnedTriage(script, process.cwd());
       expect(result.exit).toBe(2);
-      expect(result.result).toEqual({
-        version: 1,
-        isFlagged: false,
-        crappyPercent: 0,
-        action: null,
-        remaining: 0,
-        report: "",
-      });
+      expect(result.result).toBeNull();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -471,6 +470,7 @@ describe("spawned gate and triage", () => {
     try {
       const result = await runSpawnedTriage(script, process.cwd());
       expect(result.exit).toBe(0);
+      if (result.exit !== 0) return;
       expect(result.result.action?.name).toBe("covered");
       expect(result.result.action?.filePath).toBe("src/detect/fs.ts");
     } finally {

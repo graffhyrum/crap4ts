@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { bunExists, bunReadText } from "./bun-io";
 import { classify } from "./classify";
 import type { GateConfig, ProjectSummary, TriageResult } from "./types";
-import { isInsideRepo, parseGateConfig, parseProjectSummary } from "./types";
+import { isInsideRepo, parseGateConfig, parseProjectSummary, scrubText } from "./types";
 export type TriageFs = {
   exists: (path: string) => boolean | Promise<boolean>;
   readText: (path: string) => string | Promise<string>;
@@ -12,12 +12,12 @@ export async function main(argv: string[], deps: Parameters<typeof runTriage>[1]
   try {
     const { result, exit, message } = await runTriage(argv, deps);
     if (message !== null) {
-      console.error(message);
+      console.error(scrubText(message, "triage failed"));
     }
     console.log(JSON.stringify(result));
     return exit;
   } catch (err) {
-    console.error(err instanceof Error ? err.message : "triage failed");
+    console.error(scrubText(err instanceof Error ? err.message : "", "triage failed"));
     console.log(
       JSON.stringify({
         version: 1,

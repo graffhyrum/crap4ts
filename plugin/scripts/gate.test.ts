@@ -173,6 +173,33 @@ describe("runGate", () => {
     expect(result.isFlagged).toBe(false);
   });
 
+  test("crap4ts exit 2 hides an auth token in stderr", async () => {
+    const config = {
+      version: 1,
+      coverageCommand: "bun test --coverage",
+      crapArgs: ["-c", "coverage/lcov.info", "-f", "lcov"],
+      threshold: 30,
+      projectThreshold: 5,
+    };
+    const { result, exit } = await runGate({
+      cwd: "/proj",
+      runner: async (cmd) => {
+        if (cmd === "bunx") {
+          return { exitCode: 2, stdout: "", stderr: "failed _authToken=tok" };
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      fs: {
+        exists: (p) => p === gatePath,
+        readText: () => JSON.stringify(config),
+        writeText: () => {},
+        mkdirp: () => {},
+      },
+    });
+    expect(exit).toBe(2);
+    expect(result.message).toBe("crap4ts exited 2");
+  });
+
   test("invalid JSON on exit 1 → exit 2 report invalid", async () => {
     const config = {
       version: 1,

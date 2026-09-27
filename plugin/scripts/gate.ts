@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { bunExists, bunMkdirp, bunReadText, bunWriteText, spawnCaptured } from "./bun-io";
 import type { GateConfig, GateResult } from "./types";
-import { clampText, isInsideRepo, parseGateConfig, parseProjectSummary } from "./types";
+import { isInsideRepo, parseGateConfig, parseProjectSummary, scrubText } from "./types";
 export type CommandRunner = (
   command: string,
   args: string[],
@@ -31,7 +31,7 @@ export async function main(deps: Parameters<typeof runGate>[0]): Promise<number>
       crappyCount: 0,
       crappyPercent: 0,
       report: join(deps.cwd, ".crap4ts", "report.json"),
-      message: clampText(err instanceof Error ? err.message : "", "gate failed"),
+      message: scrubText(err instanceof Error ? err.message : "", "gate failed"),
     };
     console.log(JSON.stringify(result));
     return 2;
@@ -86,15 +86,15 @@ export async function runGate(deps: { cwd: string; runner: CommandRunner; fs: Ga
   const coverageRun = await deps.runner(coverage.cmd, coverage.args, deps.cwd);
   if (coverageRun.exitCode !== 0) {
     return missing(
-      clampText(coverageRun.stderr, `coverage command exited ${coverageRun.exitCode}`),
+      scrubText(coverageRun.stderr, `coverage command exited ${coverageRun.exitCode}`),
     );
   }
   const crap = await deps.runner("bunx", ["@graffhyrum/crap4ts", ...toolArgs], deps.cwd);
   if (crap.exitCode === 2) {
-    return missing(clampText(crap.stderr, "crap4ts exited 2"));
+    return missing(scrubText(crap.stderr, "crap4ts exited 2"));
   }
   if (crap.exitCode !== 0 && crap.exitCode !== 1) {
-    return missing(clampText(crap.stderr, `crap4ts exited ${crap.exitCode}`));
+    return missing(scrubText(crap.stderr, `crap4ts exited ${crap.exitCode}`));
   }
   let raw: unknown;
   try {

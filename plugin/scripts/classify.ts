@@ -1,4 +1,4 @@
-import { referenceFor, type ProjectSummary, type TriageAction } from "./types";
+import type { ProjectSummary, TriageAction } from "./types";
 
 export type ClassifyResult = {
   isFlagged: boolean;
@@ -21,21 +21,23 @@ export function classify(
   for (const fn of summary.functions) {
     if (!fn.isCrappy) continue;
 
-    const kind: TriageAction["kind"] =
-      fn.coverage === null ? "fix-join" : fn.complexity >= threshold ? "split" : "test";
-    const reference = referenceFor(kind);
-
-    actions.push({
-      kind,
+    const base = {
       filePath: fn.filePath,
       startLine: fn.startLine,
       endLine: fn.endLine,
       name: fn.name,
       complexity: fn.complexity,
-      coverage: fn.coverage,
       crapScore: fn.crapScore,
-      reference,
-    });
+    };
+    if (fn.coverage === null) {
+      actions.push({ ...base, kind: "fix-join", coverage: null, reference: "join.md" });
+      continue;
+    }
+    if (fn.complexity >= threshold) {
+      actions.push({ ...base, kind: "split", coverage: fn.coverage, reference: "split.md" });
+      continue;
+    }
+    actions.push({ ...base, kind: "test", coverage: fn.coverage, reference: "test.md" });
   }
 
   actions.sort((a, b) => {
