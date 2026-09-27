@@ -22,7 +22,11 @@ function makeAdapter(overrides: Partial<RunnerAdapter> = {}): RunnerAdapter {
 describe("configureRunner", () => {
   test("calls write with full dest path and TOML content", async () => {
     const write = mock(async () => undefined);
-    const fs: FileSystem = { exists: async () => false, readText: async () => null };
+    const fs: FileSystem = {
+      exists: async () => false,
+      readText: async () => null,
+      realPath: async (p) => p,
+    };
 
     await configureRunner(makeAdapter(), PROJECT_ROOT, write, fs);
 
@@ -31,7 +35,11 @@ describe("configureRunner", () => {
 
   test("does not call write when file already exists", async () => {
     const write = mock(async () => undefined);
-    const fs: FileSystem = { exists: async () => true, readText: async () => null };
+    const fs: FileSystem = {
+      exists: async () => true,
+      readText: async () => null,
+      realPath: async (p) => p,
+    };
 
     await configureRunner(makeAdapter(), PROJECT_ROOT, write, fs);
 
@@ -40,7 +48,11 @@ describe("configureRunner", () => {
 
   test("logs warning containing 'already exists' when skipping", async () => {
     const write = mock(async () => undefined);
-    const fs: FileSystem = { exists: async () => true, readText: async () => null };
+    const fs: FileSystem = {
+      exists: async () => true,
+      readText: async () => null,
+      realPath: async (p) => p,
+    };
     const warnMessages: string[] = [];
     const origWarn = console.warn;
     console.warn = (msg: string) => {
@@ -58,7 +70,11 @@ describe("configureRunner", () => {
 
   test("logs 'Written:' on success", async () => {
     const write = mock(async () => undefined);
-    const fs: FileSystem = { exists: async () => false, readText: async () => null };
+    const fs: FileSystem = {
+      exists: async () => false,
+      readText: async () => null,
+      realPath: async (p) => p,
+    };
     const logMessages: string[] = [];
     const origLog = console.log;
     console.log = (msg: string) => {
@@ -75,7 +91,11 @@ describe("configureRunner", () => {
   });
 
   test("a write failure is printed and does not throw", async () => {
-    const fs: FileSystem = { exists: async () => false, readText: async () => null };
+    const fs: FileSystem = {
+      exists: async () => false,
+      readText: async () => null,
+      realPath: async (p) => p,
+    };
     const errors: string[] = [];
     const orig = console.error;
     console.error = (msg: string) => {
@@ -97,7 +117,11 @@ describe("configureRunner", () => {
   });
 
   test("a non-Error write failure is printed", async () => {
-    const fs: FileSystem = { exists: async () => false, readText: async () => null };
+    const fs: FileSystem = {
+      exists: async () => false,
+      readText: async () => null,
+      realPath: async (p) => p,
+    };
     const errors: string[] = [];
     const orig = console.error;
     console.error = (msg: string) => {

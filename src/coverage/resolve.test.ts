@@ -37,7 +37,7 @@ describe("coverage format detection", () => {
         },
       ],
     });
-    const result = await parseCoverage(content, "v8.json", "v8", process.cwd());
+    const result = await parseCoverage(content, "v8.json", "v8", { sourceRoot: process.cwd() });
     expect(result[0]?.filePath).toBe(path.resolve("src/coverage/resolve.ts"));
     expect(result[0]?.statements[0]).toEqual({ startLine: 1, endLine: 1, hits: 1 });
   });
@@ -57,7 +57,9 @@ describe("coverage format detection", () => {
         },
       ],
     });
-    const result = await parseCoverage(content, "coverage.json", undefined, process.cwd());
+    const result = await parseCoverage(content, "coverage.json", undefined, {
+      sourceRoot: process.cwd(),
+    });
     expect(result[0]?.statements[0]?.hits).toBe(3);
   });
 

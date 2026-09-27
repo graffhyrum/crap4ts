@@ -8,7 +8,7 @@ All library functions throw `CrapError` (or subclasses). `process.exit` is only 
 ## Dependency Injection
 
 **Existing `FileSystem` interface is the standard seam for I/O.**
-`src/detect/types.ts` exports `FileSystem` with `exists()` and `readText()`. Any new module that reads files must accept `fs: FileSystem = bunFileSystem` as a parameter. This enables unit tests with zero real I/O and zero temp files — use the `makeFs()` factory pattern from `src/detect/runners/bun.test.ts`.
+`src/detect/types.ts` exports `FileSystem` with `exists()`, `readText()`, and `realPath()`. Any new module that reads files must accept `fs: FileSystem = bunFileSystem` as a parameter. This enables unit tests with zero real I/O and zero temp files — use the `makeFs()` factory pattern from `src/detect/runners/bun.test.ts`.
 
 ## Adding Required Fields to `Config`
 
