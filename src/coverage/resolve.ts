@@ -1,5 +1,5 @@
 import type { FileSystem } from "../detect/types";
-import { CrapError, type CoverageFormat, type FileCoverage } from "../types";
+import { type CoverageFormat, type FileCoverage } from "../types";
 import { parseIstanbul } from "./istanbul";
 import { parseLcov } from "./lcov";
 import { parseV8 } from "./v8";
@@ -19,24 +19,23 @@ export async function parseCoverage(
   return dispatch(resolved, content, filePath, source);
 }
 
+const parsers = {
+  istanbul: async (content: string, filePath: string) => parseIstanbul(content, filePath),
+  lcov: async (content: string) => parseLcov(content),
+  v8: (content: string, filePath: string, source?: CoverageSource) =>
+    parseV8(content, filePath, source),
+} satisfies Record<
+  CoverageFormat,
+  (content: string, filePath: string, source?: CoverageSource) => Promise<FileCoverage[]>
+>;
+
 async function dispatch(
   format: CoverageFormat,
   content: string,
   filePath: string,
   source: CoverageSource,
 ): Promise<FileCoverage[]> {
-  switch (format) {
-    case "istanbul":
-      return parseIstanbul(content, filePath);
-    case "lcov":
-      return parseLcov(content);
-    case "v8":
-      return parseV8(content, filePath, source);
-    default: {
-      const unreachable: never = format;
-      throw new CrapError(`unhandled coverage format: ${unreachable}`);
-    }
-  }
+  return parsers[format](content, filePath, source);
 }
 
 function detectFormat(content: string, filePath: string): CoverageFormat {

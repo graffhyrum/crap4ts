@@ -285,4 +285,66 @@ describe("classify", () => {
       actions: [],
     });
   });
+
+  test("equal crap scores sort by start line, then path, then name", () => {
+    const fn = (
+      overrides: Partial<ProjectSummary["functions"][number]>,
+    ): ProjectSummary["functions"][number] => ({
+      name: "a",
+      filePath: "a.ts",
+      startLine: 1,
+      endLine: 2,
+      complexity: 5,
+      coverage: 0,
+      crapScore: 30,
+      isCrappy: true,
+      ...overrides,
+    });
+    const flagged = { isFlagged: true, crappyPercent: 100 };
+
+    const byLine = classify(
+      summary({
+        ...flagged,
+        functions: [fn({ name: "later", startLine: 20 }), fn({ name: "earlier", startLine: 10 })],
+      }),
+      30,
+    );
+    expect(byLine.actions.map((action) => action.name)).toEqual(["earlier", "later"]);
+
+    const byPath = classify(
+      summary({
+        ...flagged,
+        functions: [
+          fn({ name: "same", filePath: "z.ts", startLine: 4 }),
+          fn({ name: "same", filePath: "a.ts", startLine: 4 }),
+        ],
+      }),
+      30,
+    );
+    expect(byPath.actions.map((action) => action.filePath)).toEqual(["a.ts", "z.ts"]);
+
+    const byName = classify(
+      summary({
+        ...flagged,
+        functions: [
+          fn({ name: "b", filePath: "a.ts", startLine: 4 }),
+          fn({ name: "a", filePath: "a.ts", startLine: 4 }),
+        ],
+      }),
+      30,
+    );
+    expect(byName.actions.map((action) => action.name)).toEqual(["a", "b"]);
+
+    const tied = classify(
+      summary({
+        ...flagged,
+        functions: [
+          fn({ name: "same", filePath: "a.ts", startLine: 4 }),
+          fn({ name: "same", filePath: "a.ts", startLine: 4 }),
+        ],
+      }),
+      30,
+    );
+    expect(tied.actions.map((action) => action.name)).toEqual(["same", "same"]);
+  });
 });

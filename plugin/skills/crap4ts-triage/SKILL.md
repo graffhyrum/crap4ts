@@ -12,7 +12,7 @@ description: Names the next edit from a crap4ts report. Use when the gate exits 
 5. Do what that reference says.
    - `join.md`: fix the coverage join. Do not edit the function.
    - `test.md`: add a test that hits `action.filePath` from `action.startLine` to `action.endLine`. Do not edit the function.
-   - `split.md`: edit only `action.name` in `action.filePath` from `action.startLine` to `action.endLine`.
+   - `split.md`: edit `action.name` in `action.filePath`. A helper in that same file may sit outside the function span. Do not edit other files.
 6. Run `bun ${CURSOR_PLUGIN_ROOT}/scripts/gate.ts` again.
 7. When gate `exit` is 0, stop. When `exit` is 1, go back to step 1. When `exit` is 2, stop and repeat `message`.
 8. Do not open `.crap4ts/report.json`. Do not recompute CRAP. Do not change thresholds. Do not add `--exclude`.
