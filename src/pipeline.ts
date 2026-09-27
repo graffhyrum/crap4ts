@@ -1,4 +1,3 @@
-import fs from "fs";
 import path from "path";
 import { Glob } from "bun";
 import type {
@@ -17,10 +16,15 @@ import { summarize } from "./crap/score";
 import { renderTable } from "./report/table";
 import { renderJson } from "./report/json";
 import { renderHtml } from "./report/html";
+import { bunFileSystem } from "./detect/fs";
+import type { FileSystem } from "./detect/types";
 import { isGitignored, loadGitignoreGlobs } from "./gitignore";
 
-export async function runPipeline(config: Config): Promise<number> {
-  const sourceFiles = await resolveSourceFiles(config);
+export async function runPipeline(
+  config: Config,
+  fs: FileSystem = bunFileSystem,
+): Promise<0 | 1 | 2> {
+  const sourceFiles = await resolveSourceFiles(config, fs);
   if (sourceFiles.length === 0) {
     console.error("No source files found.");
     return 2;
@@ -28,28 +32,36 @@ export async function runPipeline(config: Config): Promise<number> {
   if (config.onlyCrappyDeprecated) {
     console.warn("--only-crappy is deprecated (now the default). Use --all to show all functions.");
   }
-  const functions = analyzeAllFiles(sourceFiles);
-  const coverage = readAndParseCoverage(config);
+  const functions = await analyzeAllFiles(sourceFiles, fs);
+  const coverage = await readAndParseCoverage(config, fs);
   const matched = matchFunctions(functions, coverage, config.threshold);
   const sorted = sortFunctions(matched, config.sort);
   const summary = summarize(sorted, config.projectThreshold);
   const displayed = config.showAll ? sorted : sorted.filter((f) => f.isCrappy);
   const output = renderOutput({ ...summary, functions: displayed }, config);
-  writeOutput(output, config);
+  await writeOutput(output, config);
   return summary.isFlagged ? 1 : 0;
 }
 
-async function resolveSourceFiles(config: Config): Promise<string[]> {
-  const gitignoreGlobs = config.skipGitignore ? [] : await loadGitignoreGlobs(".");
-  if (config.files.length > 0) return resolveExplicitFiles(config.files, gitignoreGlobs);
+async function resolveSourceFiles(config: Config, fs: FileSystem): Promise<string[]> {
+  const gitignoreGlobs = config.skipGitignore ? [] : await loadGitignoreGlobs(".", fs);
+  if (config.files.length > 0) return resolveExplicitFiles(config.files, gitignoreGlobs, fs);
   return resolveGlobFiles(config.include, config.exclude, gitignoreGlobs);
 }
 
-function resolveExplicitFiles(files: string[], gitignoreGlobs: Glob[]): string[] {
-  return files
-    .map((f) => path.resolve(f))
-    .filter((f) => fs.existsSync(f))
-    .filter((f) => !isGitignored(gitignoreGlobs, path.relative(".", f)));
+async function resolveExplicitFiles(
+  files: string[],
+  gitignoreGlobs: Glob[],
+  fs: FileSystem,
+): Promise<string[]> {
+  const kept: string[] = [];
+  for (const file of files) {
+    const resolved = path.resolve(file);
+    if (!(await fs.exists(resolved))) continue;
+    if (isGitignored(gitignoreGlobs, path.relative(".", resolved))) continue;
+    kept.push(resolved);
+  }
+  return kept;
 }
 
 async function resolveGlobFiles(
@@ -67,20 +79,22 @@ async function resolveGlobFiles(
   return results;
 }
 
-function analyzeAllFiles(files: string[]): FunctionInfo[] {
+async function analyzeAllFiles(files: string[], fs: FileSystem): Promise<FunctionInfo[]> {
   const results: FunctionInfo[] = [];
   for (const filePath of files) {
-    const content = fs.readFileSync(filePath, "utf-8");
+    const content = await fs.readText(filePath);
+    if (content === null) throw new CrapError(`Source file not found: ${filePath}`);
     results.push(...analyzeComplexity(content, filePath));
   }
   return results;
 }
 
-function readAndParseCoverage(config: Config): FileCoverage[] {
+async function readAndParseCoverage(config: Config, fs: FileSystem): Promise<FileCoverage[]> {
   const covPath = path.resolve(config.coveragePath);
-  if (!fs.existsSync(covPath)) throw new CrapError(`Coverage file not found: ${covPath}`);
-  const content = fs.readFileSync(covPath, "utf-8");
-  return parseCoverage(content, covPath, config.format);
+  if (!(await fs.exists(covPath))) throw new CrapError(`Coverage file not found: ${covPath}`);
+  const content = await fs.readText(covPath);
+  if (content === null) throw new CrapError(`Coverage file not found: ${covPath}`);
+  return await parseCoverage(content, covPath, config.format);
 }
 
 function sortFunctions(functions: FunctionCrap[], sort: SortField): FunctionCrap[] {
@@ -113,10 +127,10 @@ function renderOutput(summary: ProjectSummary, config: Config): string {
   }
 }
 
-function writeOutput(output: string, config: Config): void {
+async function writeOutput(output: string, config: Config): Promise<void> {
   const dest = config.outputFile ?? defaultOutputFile(config);
   if (dest) {
-    fs.writeFileSync(dest, output, "utf-8");
+    await Bun.write(dest, output);
     console.log(`Report written to ${dest}`);
   } else {
     console.log(output);

@@ -13,5 +13,18 @@ try {
     console.error(error.message);
     process.exit(error.exitCode);
   }
+  if (isParseArgsError(error)) {
+    console.error(error.message);
+    process.exit(2);
+  }
   throw error;
+}
+
+function isParseArgsError(error: unknown): error is Error {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.startsWith("ERR_PARSE_ARGS_")
+  );
 }
