@@ -50,7 +50,7 @@ async function convertScripts(
     const resolved = resolveUrl(script.url, sourceRoot);
     if (!resolved) continue;
     const sourceContent = await readFile(resolved);
-    if (!sourceContent) continue;
+    if (sourceContent === undefined) continue;
     if (offsetPastEnd(script.functions, sourceContent.length)) {
       throw new CrapError(`Invalid coverage file: offset past end of ${resolved}`);
     }
@@ -88,7 +88,8 @@ function isInsideRoot(filePath: string, sourceRoot: string): boolean {
     canonicalize(path.resolve(sourceRoot)),
     canonicalize(path.resolve(filePath)),
   );
-  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+  if (rel === "" || path.isAbsolute(rel)) return false;
+  return !rel.split(/[/\\]/).includes("..");
 }
 
 function canonicalize(filePath: string): string {

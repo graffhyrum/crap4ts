@@ -100,6 +100,23 @@ describe("V8 parser", () => {
     await expect(parseV8(payloadWithRange(1.5, 2, 1), "bad.json")).rejects.toThrow(CrapError);
   });
 
+  test("reads a file whose name starts with two dots", async () => {
+    const result = await parseV8(payload("..generated/a.ts"), "v8.json", {
+      sourceRoot: "/repo",
+      readFile: async () => source,
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]?.filePath).toBe(path.resolve("/repo", "..generated/a.ts"));
+  });
+
+  test("throws when an offset is past the end of an empty source", async () => {
+    await expect(
+      parseV8(payloadWithRange(0, 1, 1), "bad.json", {
+        readFile: async () => "",
+      }),
+    ).rejects.toThrow(CrapError);
+  });
+
   test("throws when an offset is past the end of the source", async () => {
     await expect(
       parseV8(payloadWithRange(0, 9999, 1), "bad.json", {
