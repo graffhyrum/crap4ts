@@ -69,7 +69,7 @@ crap4ts -c v8-coverage.json -f v8 --sort complexity
 | `--coverage` | `-c` | `./coverage/coverage-final.json` | Coverage file path |
 | `--format` | `-f` | auto-detect | Coverage format: `istanbul`, `lcov`, `v8` |
 | `--threshold` | `-t` | `30` | CRAP score threshold |
-| `--project-threshold` | | `5` | % of crappy functions that flags the project |
+| `--project-threshold` | | `0` | % of crappy functions that flags the project |
 | `--output` | `-o` | `table` | Report format: `table`, `json`, `html` |
 | `--output-file` | | stdout | Write report to file |
 | `--sort` | | `score` | Sort by: `score`, `name`, `complexity`, `coverage` |
@@ -104,8 +104,11 @@ crap4ts -c v8-coverage.json -f v8 --sort complexity
 ```bash
 bun test          # Run tests
 bun run check     # Type check with tsc
-bun run vet       # Lint, format, typecheck, and test
+bun run score     # CRAP-score this repo (needs coverage/lcov.info)
+bun run vet       # Lint, format, typecheck, and gates
 ```
+
+`bun run gate` runs the repo rules, `bun test --coverage`, then `bun run score`. The score uses `coverage/lcov.info` on `src` and `plugin` and skips `*.test.ts`. The project limit is 0. Exit 1 means this repo has a crappy function.
 
 ### Releases
 

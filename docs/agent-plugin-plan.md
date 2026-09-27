@@ -77,7 +77,7 @@ Source of truth is the current tree, not the README where they disagree.
 - Config is argv only. No config file in the CLI.
 - `--init` detects Bun only. It writes `bunfig.toml` for LCOV when missing. It prints `crap4ts -c coverage/lcov.info -f lcov`. If `bunfig.toml` exists, it skips the write and still exits 0.
 - Bare `crap4ts` reads `./coverage/coverage-final.json`.
-- Exit 0: project not flagged. Exit 1: `crappyPercent > projectThreshold` (default 5, strict greater-than). Exit 1 also means `--init` found no runner.
+- Exit 0: project not flagged. Exit 1: `crappyPercent > projectThreshold` (default 0, strict greater-than). Exit 1 also means `--init` found no runner.
 - Exit 2: `CrapError`, missing coverage, bad args, V8 file without `-f v8`, or no source files. The README lists 0, 1, and 2.
 - Function crappy when `score >= threshold` (default 30). At full coverage, score equals complexity. Complexity 30 at full coverage stays crappy. Complexity 5 at 0% coverage scores 30 and is crappy. Complexity 4 at 0% scores 20 and is not.
 - Null coverage uses 0 in the formula `C^2 * (1 - cov)^3 + C`. The table label can say `no cov` while JSON `isCrappy` is true.

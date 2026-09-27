@@ -26,7 +26,7 @@ describe("CLI parsing", () => {
     const config = parseCli(["node", "crap4ts"]);
     expect(config.coveragePath).toBe("./coverage/coverage-final.json");
     expect(config.threshold).toBe(30);
-    expect(config.projectThreshold).toBe(5);
+    expect(config.projectThreshold).toBe(0);
     expect(config.output).toBe("table");
     expect(config.sort).toBe("score");
     expect(config.showAll).toBe(false);
