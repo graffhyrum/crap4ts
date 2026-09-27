@@ -1,12 +1,14 @@
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { type } from "arktype";
 import path from "path";
 import type { FileCoverage, StatementCoverage } from "../types";
 import { CrapError } from "../types";
-import { V8CoverageSchema } from "../schemas";
+import { V8CoverageSchema, V8FunctionSchema, V8RangeSchema, V8ScriptSchema } from "../schemas";
 
-type V8Range = { startOffset: number; endOffset: number; count: number };
-type V8Function = { functionName: string; ranges: V8Range[] };
-type V8Script = { scriptId: string; url: string; functions: V8Function[] };
+type V8Range = typeof V8RangeSchema.infer;
+type V8Function = typeof V8FunctionSchema.infer;
+type V8Script = typeof V8ScriptSchema.infer;
 
 type V8Options = {
   sourceRoot?: string;
@@ -49,6 +51,9 @@ async function convertScripts(
     if (!resolved) continue;
     const sourceContent = await readFile(resolved);
     if (!sourceContent) continue;
+    if (offsetPastEnd(script.functions, sourceContent.length)) {
+      throw new CrapError(`Invalid coverage file: offset past end of ${resolved}`);
+    }
     const lineOffsets = buildLineOffsets(sourceContent);
     const statements = extractStatements(script.functions, lineOffsets);
     results.push({ filePath: resolved, statements });
@@ -57,10 +62,50 @@ async function convertScripts(
 }
 
 function resolveUrl(url: string, sourceRoot: string): string | undefined {
-  if (url.startsWith("file://")) return url.slice(7);
+  const resolved = pathFromCoverageUrl(url, sourceRoot);
+  if (resolved === undefined) return undefined;
+  if (!isInsideRoot(resolved, sourceRoot)) return undefined;
+  return resolved;
+}
+
+function pathFromCoverageUrl(url: string, sourceRoot: string): string | undefined {
+  if (url.startsWith("file://")) return fileUrlPath(url);
   if (path.isAbsolute(url)) return url;
-  if (url && !url.includes("://")) return path.resolve(sourceRoot, url);
+  if (url !== "" && !url.includes("://")) return path.resolve(sourceRoot, url);
   return undefined;
+}
+
+function fileUrlPath(url: string): string | undefined {
+  try {
+    return fileURLToPath(url);
+  } catch {
+    return undefined;
+  }
+}
+
+function isInsideRoot(filePath: string, sourceRoot: string): boolean {
+  const rel = path.relative(
+    canonicalize(path.resolve(sourceRoot)),
+    canonicalize(path.resolve(filePath)),
+  );
+  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+}
+
+function canonicalize(filePath: string): string {
+  try {
+    return realpathSync(filePath);
+  } catch {
+    return filePath;
+  }
+}
+
+function offsetPastEnd(functions: V8Function[], sourceLength: number): boolean {
+  for (const fn of functions) {
+    for (const range of fn.ranges) {
+      if (range.endOffset > sourceLength) return true;
+    }
+  }
+  return false;
 }
 
 function buildLineOffsets(source: string): number[] {
