@@ -8,5 +8,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src", "plugin"]
+  "include": ["src", "plugin", "scripts"]
 }
