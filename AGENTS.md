@@ -17,3 +17,5 @@ Before adding a required field to `src/types.ts::Config`, run:
 grep -r 'coveragePath:\|files:\|include:\|skipGitignore:' src/**/*.test.ts
 ```
 Any match means a test constructs a `Config` literal directly and will fail tsc. Update those fixtures first.
+
+Packages are deep modules: see [src/packages/README.md](./src/packages/README.md) before adding or importing one.
