@@ -17,19 +17,21 @@ export const IstanbulFileSchema = type({
 
 export { StatementLocationSchema };
 
-const V8RangeSchema = type({
-  startOffset: "number",
-  endOffset: "number",
-  count: "number",
-});
+export const V8RangeSchema = type({
+  startOffset: "number.integer >= 0",
+  endOffset: "number.integer >= 0",
+  count: "number.integer >= 0",
+}).narrow((range, ctx) =>
+  range.endOffset >= range.startOffset ? true : ctx.reject("endOffset must be >= startOffset"),
+);
 
-const V8FunctionSchema = type({
+export const V8FunctionSchema = type({
   functionName: "string",
   ranges: V8RangeSchema.array(),
   "isBlockCoverage?": "boolean",
 });
 
-const V8ScriptSchema = type({
+export const V8ScriptSchema = type({
   scriptId: "string",
   url: "string",
   functions: V8FunctionSchema.array(),
