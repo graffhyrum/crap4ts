@@ -29,6 +29,7 @@ function config(overrides: Partial<Config> = {}): Config {
     files: ["src/a.ts"],
     init: false,
     skipGitignore: true,
+    quiet: false,
     ...overrides,
   };
 }

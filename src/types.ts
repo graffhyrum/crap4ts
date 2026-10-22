@@ -52,6 +52,7 @@ export type Config = {
   files: string[];
   init: boolean;
   skipGitignore: boolean;
+  quiet: boolean;
 };
 
 export class CrapError extends Error {
