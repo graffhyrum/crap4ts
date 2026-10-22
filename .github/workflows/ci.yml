@@ -32,6 +32,12 @@ jobs:
       - name: Typecheck
         run: bun run check
 
+      - name: Rule validator
+        run: bun run rule-validator
+
+      - name: Stepdown rule
+        run: bun run stepdown-rule
+
       - name: Test
         run: bun test --coverage
 
