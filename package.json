@@ -1,6 +1,6 @@
 {
   "name": "@graffhyrum/crap4ts",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "packageManager": "bun@1.4.2",
   "description": "CRAP score calculator for TypeScript/JavaScript codebases",
   "repository": {

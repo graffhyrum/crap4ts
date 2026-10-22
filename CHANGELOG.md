@@ -1,5 +1,11 @@
 # @graffhyrum/crap4ts
 
+## 2.1.2
+
+### Patch Changes
+
+- 8febb15: Make `bun run vet` quiet on success while still printing full output on failure.
+
 ## 2.1.1
 
 ### Patch Changes
