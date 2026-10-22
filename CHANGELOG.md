@@ -1,5 +1,11 @@
 # @graffhyrum/crap4ts
 
+## 2.1.1
+
+### Patch Changes
+
+- 912fdce: Add rule-validator and stepdown-rule as dev dependencies, wire them into vet, and align CI/release workflows for automatic publishing.
+
 ## 2.1.0
 
 ### Minor Changes
