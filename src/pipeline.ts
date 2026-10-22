@@ -29,18 +29,29 @@ export async function runPipeline(
     console.error("No source files found.");
     return 2;
   }
-  if (config.onlyCrappyDeprecated) {
-    console.warn("--only-crappy is deprecated (now the default). Use --all to show all functions.");
+  const quiet = config.quiet === true;
+  const warnings: string[] = [];
+  const warn = (msg: string) => warnings.push(msg);
+  try {
+    if (config.onlyCrappyDeprecated) {
+      warn("--only-crappy is deprecated (now the default). Use --all to show all functions.");
+    }
+    const functions = await analyzeAllFiles(sourceFiles, fs);
+    const coverage = await readAndParseCoverage(config, fs);
+    const matched = matchFunctions(functions, coverage, config.threshold, warn);
+    const sorted = sortFunctions(matched, config.sort);
+    const summary = summarize(sorted, config.projectThreshold);
+    const displayed = config.showAll ? sorted : sorted.filter((f) => f.isCrappy);
+    const output = renderOutput({ ...summary, functions: displayed }, config);
+    await writeOutput(output, config, { quiet, flagged: summary.isFlagged });
+    if (!quiet || summary.isFlagged) {
+      for (const message of warnings) console.warn(message);
+    }
+    return summary.isFlagged ? 1 : 0;
+  } catch (error) {
+    for (const message of warnings) console.warn(message);
+    throw error;
   }
-  const functions = await analyzeAllFiles(sourceFiles, fs);
-  const coverage = await readAndParseCoverage(config, fs);
-  const matched = matchFunctions(functions, coverage, config.threshold);
-  const sorted = sortFunctions(matched, config.sort);
-  const summary = summarize(sorted, config.projectThreshold);
-  const displayed = config.showAll ? sorted : sorted.filter((f) => f.isCrappy);
-  const output = renderOutput({ ...summary, functions: displayed }, config);
-  await writeOutput(output, config);
-  return summary.isFlagged ? 1 : 0;
 }
 
 async function resolveSourceFiles(config: Config, fs: FileSystem): Promise<string[]> {
@@ -127,12 +138,17 @@ function renderOutput(summary: ProjectSummary, config: Config): string {
   }
 }
 
-async function writeOutput(output: string, config: Config): Promise<void> {
+async function writeOutput(
+  output: string,
+  config: Config,
+  options: { quiet: boolean; flagged: boolean },
+): Promise<void> {
   const dest = config.outputFile ?? defaultOutputFile(config);
+  const printConsole = !(options.quiet && !options.flagged);
   if (dest) {
     await Bun.write(dest, output);
-    console.log(`Report written to ${dest}`);
-  } else {
+    if (printConsole) console.log(`Report written to ${dest}`);
+  } else if (printConsole) {
     console.log(output);
   }
 }

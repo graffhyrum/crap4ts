@@ -26,6 +26,7 @@ function parseArgv(argv: string[]) {
       exclude: { type: "string" },
       init: { type: "boolean" },
       "no-gitignore": { type: "boolean" },
+      quiet: { type: "boolean", short: "q" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean" },
     },
@@ -53,6 +54,7 @@ function buildConfig(values: ParsedValues, positionals: string[]): Config {
     files: positionals,
     init: values.init === true,
     skipGitignore: values["no-gitignore"] === true,
+    quiet: values.quiet === true,
   };
 }
 
@@ -101,6 +103,7 @@ Options:
       --include <glob>          Source file glob (default: **/*.{ts,tsx,js,jsx})
       --exclude <glob>          Exclusion glob (default: **/node_modules/**)
       --no-gitignore            Do not exclude gitignored files
+  -q, --quiet                   Suppress output on success
       --init                    Detect test runner and configure coverage output
   -h, --help                    Show this help
       --version                 Show version`);
