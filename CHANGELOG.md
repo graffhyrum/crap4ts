@@ -1,5 +1,11 @@
 # @graffhyrum/crap4ts
 
+## 2.1.0
+
+### Minor Changes
+
+- f603213: Add `--quiet` (`-q`) flag to suppress output on success while still printing the full report on failure.
+
 ## 2.0.0
 
 ### Major Changes
