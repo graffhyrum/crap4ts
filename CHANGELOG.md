@@ -1,5 +1,11 @@
 # @graffhyrum/crap4ts
 
+## 2.1.3
+
+### Patch Changes
+
+- 3a9c68d: Remove dependency-cruiser and the lint:boundaries script.
+
 ## 2.1.2
 
 ### Patch Changes
