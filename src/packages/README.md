@@ -11,7 +11,7 @@ src/packages/<name>/
 
 Root files are the entry points. `index.ts` is the public entry in the template. Another root file, such as `client.ts`, is public too. A package can expose several small entry points. Do not re-export a whole subtree through one `index.ts`. That barrel makes every internal file part of the interface.
 
-`lib/` holds the implementation. `tests/` holds the tests. Any other subfolder is private too. You do not change `.dependency-cruiser.cjs` to add a folder.
+`lib/` holds the implementation. `tests/` holds the tests. Any other subfolder is private too. The boundary rules are enforced by convention (and code review), not by a tool.
 
 ## Entry-point boundary
 
@@ -27,4 +27,4 @@ Packages do not form a dependency cycle.
 
 ## Check
 
-`bun run lint:boundaries` runs the rules. `bun run check` runs that command after `tsc`.
+`bun run check` runs `tsc`.
