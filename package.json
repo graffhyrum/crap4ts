@@ -11,14 +11,15 @@
     "url": "https://github.com/graffhyrum/crap4ts/issues"
   },
   "homepage": "https://github.com/graffhyrum/crap4ts#readme",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "bin": {
     "crap4ts": "src/index.ts"
   },
   "files": [
     "src/**/*.ts",
     "!src/**/*.test.ts",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",

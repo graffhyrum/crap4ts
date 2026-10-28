@@ -120,4 +120,4 @@ This project uses [Changesets](https://github.com/changesets/changesets) and pub
 
 ## License
 
-Private (UNLICENSED) — published to GitHub Packages with restricted access.
+MIT. See [LICENSE](LICENSE).
